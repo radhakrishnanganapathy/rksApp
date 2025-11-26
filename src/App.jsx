@@ -61,6 +61,17 @@ function App() {
   if (loading) {
     return <LoadingScreen />;
   }
+  const { sales, orders, production, expenses } = useData();
+  if (!sales.length && !orders.length && !production.length && !expenses.length) {
+    return (
+      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <h2>Unable to load data</h2>
+          <p>Please ensure the backend URL is correct and reachable.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>

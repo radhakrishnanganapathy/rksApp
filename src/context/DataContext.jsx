@@ -6,7 +6,7 @@ const DataContext = createContext();
 export const useData = () => useContext(DataContext);
 
 export const DataProvider = ({ children }) => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const API_URL = 'https://rksapp.onrender.com/api';
 
     const [sales, setSales] = useState([]);
     const [production, setProduction] = useState([]);
@@ -24,33 +24,36 @@ export const DataProvider = ({ children }) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [
-                    salesRes, productionRes, expensesRes, stocksRes,
-                    customersRes, employeesRes, attendanceRes, ordersRes, rawMaterialsRes
-                ] = await Promise.all([
-                    fetch(`${API_URL}/sales`),
-                    fetch(`${API_URL}/production`),
-                    fetch(`${API_URL}/expenses`),
-                    fetch(`${API_URL}/stocks`),
-                    fetch(`${API_URL}/customers`),
-                    fetch(`${API_URL}/employees`),
-                    fetch(`${API_URL}/attendance`),
-                    fetch(`${API_URL}/orders`),
-                    fetch(`${API_URL}/raw-material-purchases`)
-                ]);
+                const endpoints = [
+                    'sales', 'production', 'expenses', 'stocks',
+                    'customers', 'employees', 'attendance', 'orders', 'raw-material-purchases'
+                ];
 
-                setSales(await salesRes.json());
-                setProduction(await productionRes.json());
-                setExpenses(await expensesRes.json());
-                setStocks(await stocksRes.json());
-                setCustomers(await customersRes.json());
-                setEmployees(await employeesRes.json());
-                setAttendance(await attendanceRes.json());
-                setOrders(await ordersRes.json());
-                setRawMaterialPurchases(await rawMaterialsRes.json());
-                setLoading(false);
+                const responses = await Promise.all(
+                    endpoints.map(endpoint => fetch(`${API_URL}/${endpoint}`))
+                );
+
+                // Check for errors
+                for (let i = 0; i < responses.length; i++) {
+                    if (!responses[i].ok) {
+                        throw new Error(`Failed to fetch ${endpoints[i]}: ${responses[i].statusText}`);
+                    }
+                }
+
+                const data = await Promise.all(responses.map(res => res.json()));
+
+                setSales(data[0] || []);
+                setProduction(data[1] || []);
+                setExpenses(data[2] || []);
+                setStocks(data[3] || { products: [], rawMaterials: [] });
+                setCustomers(data[4] || []);
+                setEmployees(data[5] || []);
+                setAttendance(data[6] || []);
+                setOrders(data[7] || []);
+                setRawMaterialPurchases(data[8] || []);
             } catch (error) {
                 console.error("Error fetching data:", error);
+            } finally {
                 setLoading(false);
             }
         };
