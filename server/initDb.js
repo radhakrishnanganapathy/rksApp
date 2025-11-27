@@ -49,10 +49,12 @@ const createTables = async () => {
             CREATE TABLE IF NOT EXISTS expenses (
                 id BIGINT PRIMARY KEY,
                 date DATE NOT NULL,
-                description TEXT NOT NULL,
-                amount NUMERIC NOT NULL,
                 category TEXT,
-                qty TEXT
+                material_name TEXT,
+                unit TEXT,
+                quantity NUMERIC,
+                amount NUMERIC NOT NULL,
+                notes TEXT
             );
         `);
 

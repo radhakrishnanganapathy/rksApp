@@ -80,7 +80,6 @@ const Expenses = ({ onNavigateBack }) => {
                 alert('Expense Added!');
             }
             resetExpForm();
-            setActiveTab('list');
         } catch (error) {
             console.error("Failed to save expense:", error);
             alert("Failed to save expense. Please try again.");

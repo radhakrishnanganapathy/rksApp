@@ -169,7 +169,11 @@ export const DataProvider = ({ children }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newExpense)
             });
-            if (!res.ok) throw new Error('Failed to add expense');
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error('API Error Response:', errorText);
+                throw new Error(`Failed to add expense: ${res.status} ${res.statusText}`);
+            }
             const savedExpense = await res.json();
             const mappedExpense = mapExpense(savedExpense);
             setExpenses(prev => [mappedExpense, ...prev]);
