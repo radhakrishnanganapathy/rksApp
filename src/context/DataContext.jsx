@@ -180,7 +180,7 @@ export const DataProvider = ({ children }) => {
 
             // Update Stock if Raw Material
             if (mappedExpense.category === 'Raw Material' && mappedExpense.unit !== '₹' && mappedExpense.quantity) {
-                addStock('raw_material', mappedExpense.materialName, mappedExpense.quantity, mappedExpense.unit);
+                await addStock('raw_material', mappedExpense.materialName, mappedExpense.quantity, mappedExpense.unit);
             }
         } catch (err) {
             console.error("Error adding expense:", err);
@@ -204,11 +204,11 @@ export const DataProvider = ({ children }) => {
             // Handle Stock Updates
             // 1. Revert old expense effect
             if (oldExpense && oldExpense.category === 'Raw Material' && oldExpense.unit !== '₹' && oldExpense.quantity) {
-                addStock('raw_material', oldExpense.materialName, -Number(oldExpense.quantity), oldExpense.unit);
+                await addStock('raw_material', oldExpense.materialName, -Number(oldExpense.quantity), oldExpense.unit);
             }
             // 2. Apply new expense effect
             if (mappedExpense.category === 'Raw Material' && mappedExpense.unit !== '₹' && mappedExpense.quantity) {
-                addStock('raw_material', mappedExpense.materialName, Number(mappedExpense.quantity), mappedExpense.unit);
+                await addStock('raw_material', mappedExpense.materialName, Number(mappedExpense.quantity), mappedExpense.unit);
             }
 
         } catch (err) {
@@ -225,7 +225,7 @@ export const DataProvider = ({ children }) => {
 
             // Revert Stock
             if (oldExpense && oldExpense.category === 'Raw Material' && oldExpense.unit !== '₹' && oldExpense.quantity) {
-                addStock('raw_material', oldExpense.materialName, -Number(oldExpense.quantity), oldExpense.unit);
+                await addStock('raw_material', oldExpense.materialName, -Number(oldExpense.quantity), oldExpense.unit);
             }
         } catch (err) {
             console.error("Error deleting expense:", err);
@@ -247,7 +247,7 @@ export const DataProvider = ({ children }) => {
             setRawMaterialUsage(prev => [mappedUsage, ...prev]);
 
             // Decrease Stock
-            addStock('raw_material', mappedUsage.materialName, -Number(mappedUsage.quantityUsed), mappedUsage.unit);
+            await addStock('raw_material', mappedUsage.materialName, -Number(mappedUsage.quantityUsed), mappedUsage.unit);
         } catch (err) {
             console.error("Error adding usage:", err);
         }
@@ -268,10 +268,10 @@ export const DataProvider = ({ children }) => {
 
             // Revert old usage (add back)
             if (oldUsage) {
-                addStock('raw_material', oldUsage.materialName, Number(oldUsage.quantityUsed), oldUsage.unit);
+                await addStock('raw_material', oldUsage.materialName, Number(oldUsage.quantityUsed), oldUsage.unit);
             }
             // Apply new usage (subtract)
-            addStock('raw_material', mappedUsage.materialName, -Number(mappedUsage.quantityUsed), mappedUsage.unit);
+            await addStock('raw_material', mappedUsage.materialName, -Number(mappedUsage.quantityUsed), mappedUsage.unit);
 
         } catch (err) {
             console.error("Error updating usage:", err);
@@ -286,7 +286,7 @@ export const DataProvider = ({ children }) => {
 
             // Revert usage (add back to stock)
             if (oldUsage) {
-                addStock('raw_material', oldUsage.materialName, Number(oldUsage.quantityUsed), oldUsage.unit);
+                await addStock('raw_material', oldUsage.materialName, Number(oldUsage.quantityUsed), oldUsage.unit);
             }
         } catch (err) {
             console.error("Error deleting usage:", err);

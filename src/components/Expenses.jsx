@@ -157,33 +157,42 @@ const Expenses = ({ onNavigateBack }) => {
 
     // Stock Calculations
     const stockData = useMemo(() => {
-        return stocks.rawMaterials.map(item => {
-            // Calculate Added (from expenses)
-            const added = expenses
-                .filter(e => e.category === 'Raw Material' && e.materialName === item.name && e.unit === item.unit)
-                .reduce((sum, e) => sum + Number(e.quantity || 0), 0);
+        // Group all raw materials from expenses and usage
+        const materialMap = new Map();
 
-            // Calculate Used (from usage)
-            const used = rawMaterialUsage
-                .filter(u => u.materialName === item.name && u.unit === item.unit)
-                .reduce((sum, u) => sum + Number(u.quantityUsed || 0), 0);
+        // Add from expenses
+        expenses
+            .filter(e => e.category === 'Raw Material' && e.materialName && e.unit && e.quantity)
+            .forEach(e => {
+                const key = `${e.materialName}_${e.unit}`;
+                if (!materialMap.has(key)) {
+                    materialMap.set(key, { name: e.materialName, unit: e.unit, added: 0, used: 0 });
+                }
+                materialMap.get(key).added += Number(e.quantity);
+            });
 
-            // Current is from DB (item.qty)
-            // Opening = Current - Added + Used (Approximation for display if we assume DB is current)
-            // Note: This logic assumes 'expenses' and 'usage' contain ALL history. 
-            // If they are paginated or filtered, this calculation is only valid for the loaded data.
-            // Since we load all data, this should be fine.
-            const opening = Number(item.qty) - added + used;
+        // Add from usage
+        rawMaterialUsage
+            .filter(u => u.materialName && u.unit && u.quantityUsed)
+            .forEach(u => {
+                const key = `${u.materialName}_${u.unit}`;
+                if (!materialMap.has(key)) {
+                    materialMap.set(key, { name: u.materialName, unit: u.unit, added: 0, used: 0 });
+                }
+                materialMap.get(key).used += Number(u.quantityUsed);
+            });
 
-            return {
-                ...item,
-                opening,
-                added,
-                used,
-                current: Number(item.qty)
-            };
-        });
-    }, [stocks.rawMaterials, expenses, rawMaterialUsage]);
+        // Convert to array and calculate current stock
+        return Array.from(materialMap.values()).map(item => ({
+            name: item.name,
+            unit: item.unit,
+            opening: 0, // No opening balance - everything is transactional
+            added: item.added,
+            used: item.used,
+            current: item.added - item.used, // Current = Added - Used
+            qty: item.added - item.used // For compatibility
+        }));
+    }, [expenses, rawMaterialUsage]);
 
     const totalExpensesAmount = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
