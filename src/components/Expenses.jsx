@@ -1,519 +1,501 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { Save, Wallet, Package, TrendingDown } from 'lucide-react';
+import { Save, Wallet, Package, TrendingDown, List, Trash2, Edit, X } from 'lucide-react';
 import { formatCurrency, filterByMonthYear } from '../utils';
 
 const Expenses = () => {
-    const { expenses, addExpense, rawMaterialPurchases, addRawMaterialPurchase, stocks } = useData();
+    const {
+        expenses, addExpense, updateExpense, deleteExpense,
+        stocks,
+        rawMaterialUsage, addRawMaterialUsage, updateRawMaterialUsage, deleteRawMaterialUsage
+    } = useData();
 
     const [activeTab, setActiveTab] = useState('expenses'); // 'expenses' | 'rawstock' | 'usage' | 'list'
 
-    // Tab 1: Daily Expenses
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [category, setCategory] = useState('Salary');
-    const [amount, setAmount] = useState('');
-    const [description, setDescription] = useState('');
+    // --- Tab 1: Daily Expenses ---
+    const [expId, setExpId] = useState(null); // For editing
+    const [expDate, setExpDate] = useState(new Date().toISOString().split('T')[0]);
+    const [expCategory, setExpCategory] = useState('Raw Material');
+    const [expMaterialName, setExpMaterialName] = useState('');
+    const [expUnit, setExpUnit] = useState('kg');
+    const [expQuantity, setExpQuantity] = useState('');
+    const [expAmount, setExpAmount] = useState('');
+    const [expNotes, setExpNotes] = useState('');
 
-    // Tab 2: Raw Material Stocks
-    const [rawMaterialName, setRawMaterialName] = useState('');
-    const [rawQty, setRawQty] = useState('');
-    const [pricePerKg, setPricePerKg] = useState('');
-    const [stockCheckDate, setStockCheckDate] = useState(new Date().toISOString().split('T')[0]);
+    // --- Tab 3: Raw Material Usage ---
+    const [usageId, setUsageId] = useState(null); // For editing
+    const [usageDate, setUsageDate] = useState(new Date().toISOString().split('T')[0]);
+    const [usageMaterialName, setUsageMaterialName] = useState('');
+    const [usageQuantity, setUsageQuantity] = useState('');
+    const [usageUnit, setUsageUnit] = useState('kg');
+    const [usageNotes, setUsageNotes] = useState('');
 
-    // Filter states
+    // --- Filters ---
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [filterCategory, setFilterCategory] = useState('All');
 
-    // Tab 1: Add Daily Expense
-    const handleAddExpense = () => {
-        if (!amount) return;
-        addExpense({
-            date,
-            category,
-            amount: Number(amount),
-            description
-        });
-        setAmount('');
-        setDescription('');
-        alert('Expense Added!');
+    // --- Helper Functions ---
+    const resetExpForm = () => {
+        setExpId(null);
+        setExpDate(new Date().toISOString().split('T')[0]);
+        setExpCategory('Raw Material');
+        setExpMaterialName('');
+        setExpUnit('kg');
+        setExpQuantity('');
+        setExpAmount('');
+        setExpNotes('');
     };
 
-    // Tab 2: Add Raw Material Purchase
-    const handleAddRawMaterial = () => {
-        if (!rawMaterialName || !rawQty || !pricePerKg) return;
-
-        const totalAmount = Number(rawQty) * Number(pricePerKg);
-
-        addRawMaterialPurchase({
-            date: stockCheckDate,
-            name: rawMaterialName,
-            qty: Number(rawQty),
-            pricePerKg: Number(pricePerKg),
-            totalAmount
-        });
-
-        setRawMaterialName('');
-        setRawQty('');
-        setPricePerKg('');
-        alert('Raw Material Purchase Added!');
+    const resetUsageForm = () => {
+        setUsageId(null);
+        setUsageDate(new Date().toISOString().split('T')[0]);
+        setUsageMaterialName('');
+        setUsageQuantity('');
+        setUsageUnit('kg');
+        setUsageNotes('');
     };
 
-    // Filtered data
-    const filteredExpenses = useMemo(() =>
-        filterByMonthYear(expenses, selectedMonth, selectedYear),
-        [expenses, selectedMonth, selectedYear]
+    // --- Handlers ---
+    const handleSaveExpense = async () => {
+        if (!expAmount) return alert('Amount is required');
+        if (expCategory === 'Raw Material' && !expMaterialName) return alert('Material Name is required for Raw Material');
+
+        const expenseData = {
+            date: expDate,
+            category: expCategory,
+            materialName: expCategory === 'Raw Material' ? expMaterialName : null,
+            unit: expCategory === 'Raw Material' ? expUnit : null,
+            quantity: expCategory === 'Raw Material' && expUnit !== '₹' ? Number(expQuantity) : null,
+            amount: Number(expAmount),
+            notes: expNotes
+        };
+
+        if (expId) {
+            await updateExpense(expId, expenseData);
+            alert('Expense Updated!');
+        } else {
+            await addExpense(expenseData);
+            alert('Expense Added!');
+        }
+        resetExpForm();
+    };
+
+    const handleEditExpense = (expense) => {
+        setExpId(expense.id);
+        setExpDate(expense.date);
+        setExpCategory(expense.category);
+        setExpMaterialName(expense.materialName || '');
+        setExpUnit(expense.unit || 'kg');
+        setExpQuantity(expense.quantity || '');
+        setExpAmount(expense.amount);
+        setExpNotes(expense.notes || '');
+        setActiveTab('expenses');
+    };
+
+    const handleDeleteExpense = async (id) => {
+        if (window.confirm('Are you sure you want to delete this expense? Stock will be reverted.')) {
+            await deleteExpense(id);
+        }
+    };
+
+    const handleSaveUsage = async () => {
+        if (!usageMaterialName || !usageQuantity) return alert('Material and Quantity are required');
+
+        const usageData = {
+            date: usageDate,
+            materialName: usageMaterialName,
+            quantityUsed: Number(usageQuantity),
+            unit: usageUnit,
+            notes: usageNotes
+        };
+
+        if (usageId) {
+            await updateRawMaterialUsage(usageId, usageData);
+            alert('Usage Updated!');
+        } else {
+            await addRawMaterialUsage(usageData);
+            alert('Usage Recorded!');
+        }
+        resetUsageForm();
+    };
+
+    const handleEditUsage = (usage) => {
+        setUsageId(usage.id);
+        setUsageDate(usage.date);
+        setUsageMaterialName(usage.materialName);
+        setUsageQuantity(usage.quantityUsed);
+        setUsageUnit(usage.unit);
+        setUsageNotes(usage.notes || '');
+        setActiveTab('usage');
+    };
+
+    const handleDeleteUsage = async (id) => {
+        if (window.confirm('Are you sure you want to delete this usage? Stock will be reverted.')) {
+            await deleteRawMaterialUsage(id);
+        }
+    };
+
+    // --- Derived Data ---
+    const filteredExpenses = useMemo(() => {
+        let data = filterByMonthYear(expenses, selectedMonth, selectedYear);
+        if (filterCategory !== 'All') {
+            data = data.filter(e => e.category === filterCategory);
+        }
+        return data;
+    }, [expenses, selectedMonth, selectedYear, filterCategory]);
+
+    const filteredUsage = useMemo(() =>
+        filterByMonthYear(rawMaterialUsage, selectedMonth, selectedYear),
+        [rawMaterialUsage, selectedMonth, selectedYear]
     );
 
-    const filteredRawPurchases = useMemo(() =>
-        filterByMonthYear(rawMaterialPurchases, selectedMonth, selectedYear),
-        [rawMaterialPurchases, selectedMonth, selectedYear]
-    );
+    // Stock Calculations
+    const stockData = useMemo(() => {
+        return stocks.rawMaterials.map(item => {
+            // Calculate Added (from expenses)
+            const added = expenses
+                .filter(e => e.category === 'Raw Material' && e.materialName === item.name && e.unit === item.unit)
+                .reduce((sum, e) => sum + Number(e.quantity || 0), 0);
 
-    // Tab 3: Calculate Raw Material Usage
-    const rawMaterialUsage = useMemo(() => {
-        const usage = {};
+            // Calculate Used (from usage)
+            const used = rawMaterialUsage
+                .filter(u => u.materialName === item.name && u.unit === item.unit)
+                .reduce((sum, u) => sum + Number(u.quantityUsed || 0), 0);
 
-        // Calculate for each raw material
-        stocks.rawMaterials.forEach(material => {
-            const purchases = filteredRawPurchases.filter(p => p.name === material.name);
-            const totalPurchased = purchases.reduce((sum, p) => sum + p.qty, 0);
-            const currentStock = material.qty;
+            // Current is from DB (item.qty)
+            // Opening = Current - Added + Used (Approximation for display if we assume DB is current)
+            // Note: This logic assumes 'expenses' and 'usage' contain ALL history. 
+            // If they are paginated or filtered, this calculation is only valid for the loaded data.
+            // Since we load all data, this should be fine.
+            const opening = Number(item.qty) - added + used;
 
-            // Usage = Purchases - Current Stock (simplified calculation)
-            const used = totalPurchased > currentStock ? totalPurchased - currentStock : 0;
-
-            if (used > 0 && purchases.length > 0) {
-                // Calculate average price from purchases
-                const avgPrice = purchases.reduce((sum, p) => sum + p.pricePerKg, 0) / purchases.length;
-
-                usage[material.name] = {
-                    qty: used,
-                    pricePerKg: avgPrice,
-                    totalAmount: used * avgPrice
-                };
-            }
+            return {
+                ...item,
+                opening,
+                added,
+                used,
+                current: Number(item.qty)
+            };
         });
+    }, [stocks.rawMaterials, expenses, rawMaterialUsage]);
 
-        return Object.keys(usage).map(name => ({
-            name,
-            ...usage[name]
-        }));
-    }, [stocks.rawMaterials, filteredRawPurchases]);
-
-    const totalDailyExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-    const totalRawMaterialUsage = rawMaterialUsage.reduce((sum, item) => sum + item.totalAmount, 0);
-    const totalExpenses = totalDailyExpenses + totalRawMaterialUsage;
+    const totalExpensesAmount = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
     return (
         <div className="space-y-6 pb-20">
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <Wallet size={24} />
-                Expenses
+                Expenses & Raw Materials
             </h2>
 
             {/* Tabs */}
-            <div className="flex p-1 bg-gray-100 rounded-lg text-xs">
+            <div className="flex p-1 bg-gray-100 rounded-lg text-xs overflow-x-auto">
                 <button
-                    className={`flex-1 py-2 px-2 font-medium rounded-md transition-colors ${activeTab === 'expenses' ? 'bg-white shadow text-red-600' : 'text-gray-500'
-                        }`}
+                    className={`flex-1 py-2 px-2 font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'expenses' ? 'bg-white shadow text-red-600' : 'text-gray-500'}`}
                     onClick={() => setActiveTab('expenses')}
                 >
-                    Daily Expenses
+                    Expenses
                 </button>
                 <button
-                    className={`flex-1 py-2 px-2 font-medium rounded-md transition-colors ${activeTab === 'rawstock' ? 'bg-white shadow text-amber-600' : 'text-gray-500'
-                        }`}
+                    className={`flex-1 py-2 px-2 font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'rawstock' ? 'bg-white shadow text-amber-600' : 'text-gray-500'}`}
                     onClick={() => setActiveTab('rawstock')}
                 >
-                    Raw Material
+                    Raw Material Stock
                 </button>
                 <button
-                    className={`flex-1 py-2 px-2 font-medium rounded-md transition-colors ${activeTab === 'usage' ? 'bg-white shadow text-purple-600' : 'text-gray-500'
-                        }`}
+                    className={`flex-1 py-2 px-2 font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'usage' ? 'bg-white shadow text-purple-600' : 'text-gray-500'}`}
                     onClick={() => setActiveTab('usage')}
                 >
-                    Usage
+                    Raw Material Usage
                 </button>
                 <button
-                    className={`flex-1 py-2 px-2 font-medium rounded-md transition-colors ${activeTab === 'list' ? 'bg-white shadow text-blue-600' : 'text-gray-500'
-                        }`}
+                    className={`flex-1 py-2 px-2 font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'list' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
                     onClick={() => setActiveTab('list')}
                 >
-                    Expense List
+                    Expenses List
                 </button>
             </div>
 
-            {/* Tab 1: Daily Expenses */}
+            {/* --- Tab 1: Expenses Form --- */}
             {activeTab === 'expenses' && (
-                <>
-                    <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
-                        <h3 className="font-semibold text-gray-700">Add Daily Expense</h3>
+                <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="font-semibold text-gray-700">{expId ? 'Edit Expense' : 'Add Daily Expense'}</h3>
+                        {expId && <button onClick={resetExpForm} className="text-xs text-gray-500 flex items-center gap-1"><X size={14} /> Cancel</button>}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
                         <div>
-                            <label className="block text-sm font-medium mb-1">Expense Date</label>
-                            <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="w-full border rounded p-2"
-                            />
+                            <label className="block text-sm font-medium mb-1">Date</label>
+                            <input type="date" value={expDate} onChange={(e) => setExpDate(e.target.value)} className="w-full border rounded p-2" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium mb-1">Category</label>
-                            <select
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value)}
-                                className="w-full border rounded p-2"
-                            >
+                            <select value={expCategory} onChange={(e) => setExpCategory(e.target.value)} className="w-full border rounded p-2">
+                                <option value="Raw Material">Raw Material</option>
+                                <option value="Maintenance">Maintenance</option>
+                                <option value="Equipment">Equipment</option>
                                 <option value="Salary">Salary</option>
                                 <option value="Rent">Rent</option>
                                 <option value="Transport">Transport</option>
-                                <option value="Utilities">Utilities</option>
                                 <option value="Other">Other</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Amount (₹)</label>
-                            <input
-                                type="number"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                className="w-full border rounded p-2"
-                                placeholder="Enter amount"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Description</label>
-                            <input
-                                type="text"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                className="w-full border rounded p-2"
-                                placeholder="e.g., Monthly salary payment"
-                            />
-                        </div>
-                        <button
-                            onClick={handleAddExpense}
-                            className="w-full bg-red-600 text-white py-2 rounded flex items-center justify-center gap-2"
-                        >
-                            <Save size={18} /> Save Expense
-                        </button>
-                    </div>
 
-                    {/* Filter Section */}
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Month</label>
-                                <select
-                                    value={selectedMonth}
-                                    onChange={(e) => setSelectedMonth(e.target.value)}
-                                    className="w-full border rounded p-2"
-                                >
-                                    {Array.from({ length: 12 }, (_, i) => (
-                                        <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Year</label>
-                                <select
-                                    value={selectedYear}
-                                    onChange={(e) => setSelectedYear(e.target.value)}
-                                    className="w-full border rounded p-2"
-                                >
-                                    <option value="2023">2023</option>
-                                    <option value="2024">2024</option>
-                                    <option value="2025">2025</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Total Card */}
-                    <div className="bg-red-50 p-4 rounded-xl shadow-sm border border-red-100">
-                        <div className="text-xs font-semibold uppercase text-red-700 mb-1">Daily Expenses</div>
-                        <p className="text-2xl font-bold text-gray-800">{formatCurrency(totalDailyExpenses)}</p>
-                        <p className="text-xs text-gray-600 mt-1">{filteredExpenses.length} transactions</p>
-                    </div>
-
-                    {/* Expense List */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="p-3 bg-gray-50 border-b">
-                            <h3 className="font-semibold text-gray-700">Expense Records</h3>
-                        </div>
-                        <div className="divide-y max-h-96 overflow-y-auto">
-                            {filteredExpenses.length === 0 ? (
-                                <div className="p-8 text-center text-gray-500">
-                                    No expenses found for this period
+                        {expCategory === 'Raw Material' && (
+                            <div className="bg-amber-50 p-3 rounded border border-amber-100 space-y-3">
+                                <h4 className="text-sm font-medium text-amber-800 flex items-center gap-1"><Package size={14} /> Raw Material Details</h4>
+                                <div>
+                                    <label className="block text-xs font-medium mb-1">Material Name</label>
+                                    <input
+                                        type="text"
+                                        value={expMaterialName}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setExpMaterialName(val);
+                                            const item = stocks.rawMaterials.find(s => s.name === val);
+                                            if (item) setExpUnit(item.unit);
+                                        }}
+                                        className="w-full border rounded p-2 text-sm"
+                                        placeholder="e.g. Sugar"
+                                        list="material-suggestions"
+                                    />
+                                    <datalist id="material-suggestions">
+                                        {stocks.rawMaterials.map((s, i) => <option key={i} value={s.name} />)}
+                                    </datalist>
                                 </div>
-                            ) : (
-                                filteredExpenses.map((expense) => (
-                                    <div key={expense.id} className="p-4">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded font-medium">
-                                                        {expense.category}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500">{expense.date}</span>
-                                                </div>
-                                                <p className="text-sm text-gray-800">{expense.description}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-red-600">{formatCurrency(expense.amount)}</p>
-                                            </div>
-                                        </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="block text-xs font-medium mb-1">Unit</label>
+                                        <select value={expUnit} onChange={(e) => setExpUnit(e.target.value)} className="w-full border rounded p-2 text-sm">
+                                            <option value="kg">kg</option>
+                                            <option value="lt">lt</option>
+                                            <option value="count">count</option>
+                                            <option value="₹">Direct Amount (₹)</option>
+                                        </select>
                                     </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
-                </>
-            )}
-
-            {/* Tab 2: Raw Material Stocks */}
-            {activeTab === 'rawstock' && (
-                <>
-                    <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
-                        <h3 className="font-semibold text-gray-700">Add Raw Material Purchase</h3>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Stock Checking Date</label>
-                            <input
-                                type="date"
-                                value={stockCheckDate}
-                                onChange={(e) => setStockCheckDate(e.target.value)}
-                                className="w-full border rounded p-2"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Material Name</label>
-                            <input
-                                type="text"
-                                value={rawMaterialName}
-                                onChange={(e) => setRawMaterialName(e.target.value)}
-                                className="w-full border rounded p-2"
-                                placeholder="e.g., Rice Flour"
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Quantity (kg)</label>
-                                <input
-                                    type="number"
-                                    value={rawQty}
-                                    onChange={(e) => setRawQty(e.target.value)}
-                                    className="w-full border rounded p-2"
-                                    placeholder="e.g., 50"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Price per kg (₹)</label>
-                                <input
-                                    type="number"
-                                    value={pricePerKg}
-                                    onChange={(e) => setPricePerKg(e.target.value)}
-                                    className="w-full border rounded p-2"
-                                    placeholder="e.g., 40"
-                                />
-                            </div>
-                        </div>
-                        {rawQty && pricePerKg && (
-                            <div className="bg-amber-50 p-3 rounded border border-amber-200">
-                                <p className="text-sm text-amber-800">
-                                    Total Amount: <span className="font-bold">{formatCurrency(Number(rawQty) * Number(pricePerKg))}</span>
-                                </p>
+                                    {expUnit !== '₹' && (
+                                        <div>
+                                            <label className="block text-xs font-medium mb-1">Quantity</label>
+                                            <input
+                                                type="number"
+                                                value={expQuantity}
+                                                onChange={(e) => setExpQuantity(e.target.value)}
+                                                className="w-full border rounded p-2 text-sm"
+                                                placeholder="Qty"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
-                        <button
-                            onClick={handleAddRawMaterial}
-                            className="w-full bg-amber-600 text-white py-2 rounded flex items-center justify-center gap-2"
-                        >
-                            <Save size={18} /> Add Purchase
-                        </button>
+
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Amount (₹)</label>
+                            <input type="number" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className="w-full border rounded p-2" placeholder="0.00" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Notes (Optional)</label>
+                            <input type="text" value={expNotes} onChange={(e) => setExpNotes(e.target.value)} className="w-full border rounded p-2" placeholder="Description..." />
+                        </div>
                     </div>
 
-                    {/* Current Raw Material Stocks */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="p-3 bg-gray-50 border-b">
-                            <h3 className="font-semibold text-gray-700">Current Stock Levels</h3>
-                        </div>
-                        <div className="divide-y">
-                            {stocks.rawMaterials.length === 0 ? (
-                                <div className="p-8 text-center text-gray-500">
-                                    No raw materials in stock
-                                </div>
-                            ) : (
-                                stocks.rawMaterials.map((material, idx) => (
-                                    <div key={idx} className="p-4 flex justify-between items-center">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-amber-50 p-2 rounded-full text-amber-600">
-                                                <Package size={20} />
-                                            </div>
-                                            <span className="font-medium">{material.name}</span>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="font-bold text-gray-800">{material.qty}</span>
-                                            <span className="text-xs text-gray-500 ml-1">kg</span>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
-                </>
+                    <button onClick={handleSaveExpense} className="w-full bg-red-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2">
+                        <Save size={20} /> {expId ? 'Update Expense' : 'Save Expense'}
+                    </button>
+                </div>
             )}
 
-            {/* Tab 3: Raw Material Usage */}
-            {activeTab === 'usage' && (
-                <>
-                    {/* Filter Section */}
+            {/* --- Tab 2: Raw Material Stock --- */}
+            {activeTab === 'rawstock' && (
+                <div className="space-y-4">
                     <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Month</label>
-                                <select
-                                    value={selectedMonth}
-                                    onChange={(e) => setSelectedMonth(e.target.value)}
-                                    className="w-full border rounded p-2"
-                                >
-                                    {Array.from({ length: 12 }, (_, i) => (
-                                        <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Year</label>
-                                <select
-                                    value={selectedYear}
-                                    onChange={(e) => setSelectedYear(e.target.value)}
-                                    className="w-full border rounded p-2"
-                                >
-                                    <option value="2023">2023</option>
-                                    <option value="2024">2024</option>
-                                    <option value="2025">2025</option>
-                                </select>
-                            </div>
+                        <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><Package size={20} /> Stock Overview</h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="text-xs text-gray-500 uppercase bg-gray-50">
+                                    <tr>
+                                        <th className="px-3 py-2">Material</th>
+                                        <th className="px-3 py-2 text-right">Opening</th>
+                                        <th className="px-3 py-2 text-right text-green-600">Added</th>
+                                        <th className="px-3 py-2 text-right text-red-600">Used</th>
+                                        <th className="px-3 py-2 text-right font-bold">Current</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {stockData.length === 0 ? (
+                                        <tr><td colSpan="5" className="px-3 py-4 text-center text-gray-500">No raw materials found</td></tr>
+                                    ) : (
+                                        stockData.map((item, idx) => (
+                                            <tr key={idx}>
+                                                <td className="px-3 py-2 font-medium">
+                                                    {item.name} <span className="text-xs text-gray-400">({item.unit})</span>
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-gray-600">{item.opening.toFixed(1)}</td>
+                                                <td className="px-3 py-2 text-right text-green-600">+{item.added.toFixed(1)}</td>
+                                                <td className="px-3 py-2 text-right text-red-600">-{item.used.toFixed(1)}</td>
+                                                <td className="px-3 py-2 text-right font-bold">{item.current.toFixed(1)}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="mt-4 text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                            <p><strong>Note:</strong> Current Stock = Opening + Added - Used.</p>
+                            <p>To add stock, create a "Raw Material" expense.</p>
                         </div>
                     </div>
+                </div>
+            )}
 
-                    {/* Total Usage Card */}
-                    <div className="bg-purple-50 p-4 rounded-xl shadow-sm border border-purple-100">
-                        <div className="text-xs font-semibold uppercase text-purple-700 mb-1">Raw Material Usage</div>
-                        <p className="text-2xl font-bold text-gray-800">{formatCurrency(totalRawMaterialUsage)}</p>
-                        <p className="text-xs text-gray-600 mt-1">{rawMaterialUsage.length} materials used</p>
-                    </div>
-
-                    {/* Total Expenses Summary */}
-                    <div className="bg-gradient-to-r from-red-50 to-purple-50 p-4 rounded-xl shadow-sm border border-gray-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <div className="text-xs font-semibold uppercase text-gray-600 mb-1">Total Expenses (This Month)</div>
-                                <p className="text-3xl font-bold text-gray-800">{formatCurrency(totalExpenses)}</p>
-                                <p className="text-xs text-gray-600 mt-1">
-                                    Daily: {formatCurrency(totalDailyExpenses)} + Raw Material: {formatCurrency(totalRawMaterialUsage)}
-                                </p>
-                            </div>
-                            <TrendingDown size={40} className="text-red-400" />
+            {/* --- Tab 3: Raw Material Usage --- */}
+            {activeTab === 'usage' && (
+                <div className="space-y-4">
+                    {/* Usage Form */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-semibold text-gray-700">{usageId ? 'Edit Usage' : 'Record Daily Usage'}</h3>
+                            {usageId && <button onClick={resetUsageForm} className="text-xs text-gray-500 flex items-center gap-1"><X size={14} /> Cancel</button>}
                         </div>
+                        <div className="grid grid-cols-1 gap-3">
+                            <input type="date" value={usageDate} onChange={(e) => setUsageDate(e.target.value)} className="w-full border rounded p-2" />
+
+                            <div>
+                                <label className="block text-xs font-medium mb-1">Material</label>
+                                <select
+                                    value={usageMaterialName}
+                                    onChange={(e) => {
+                                        setUsageMaterialName(e.target.value);
+                                        const item = stocks.rawMaterials.find(s => s.name === e.target.value);
+                                        if (item) setUsageUnit(item.unit);
+                                    }}
+                                    className="w-full border rounded p-2"
+                                >
+                                    <option value="">Select Material</option>
+                                    {stocks.rawMaterials.map((s, i) => <option key={i} value={s.name}>{s.name} ({s.unit})</option>)}
+                                </select>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <div className="flex-1">
+                                    <label className="block text-xs font-medium mb-1">Quantity Used</label>
+                                    <input type="number" value={usageQuantity} onChange={(e) => setUsageQuantity(e.target.value)} className="w-full border rounded p-2" placeholder="Qty" />
+                                </div>
+                                <div className="w-20">
+                                    <label className="block text-xs font-medium mb-1">Unit</label>
+                                    <input type="text" value={usageUnit} readOnly className="w-full border rounded p-2 bg-gray-100 text-gray-500" />
+                                </div>
+                            </div>
+
+                            <input type="text" value={usageNotes} onChange={(e) => setUsageNotes(e.target.value)} className="w-full border rounded p-2" placeholder="Notes (optional)" />
+                        </div>
+                        <button onClick={handleSaveUsage} className="w-full bg-purple-600 text-white py-2 rounded font-medium flex items-center justify-center gap-2">
+                            <TrendingDown size={18} /> {usageId ? 'Update Usage' : 'Record Usage'}
+                        </button>
                     </div>
 
                     {/* Usage List */}
                     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="p-3 bg-gray-50 border-b">
-                            <h3 className="font-semibold text-gray-700">Material Usage Breakdown</h3>
-                        </div>
-                        <div className="divide-y">
-                            {rawMaterialUsage.length === 0 ? (
-                                <div className="p-8 text-center text-gray-500">
-                                    No raw material usage calculated for this period
-                                </div>
+                        <div className="p-3 bg-gray-50 border-b font-semibold text-gray-700">Usage History</div>
+                        <div className="divide-y max-h-80 overflow-y-auto">
+                            {filteredUsage.length === 0 ? (
+                                <div className="p-4 text-center text-gray-500 text-sm">No usage records found</div>
                             ) : (
-                                rawMaterialUsage.map((item, idx) => (
-                                    <div key={idx} className="p-4">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <p className="font-medium text-gray-800">{item.name}</p>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    {item.qty.toFixed(2)} kg × {formatCurrency(item.pricePerKg)}/kg
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-purple-600">{formatCurrency(item.totalAmount)}</p>
-                                            </div>
+                                filteredUsage.map(u => (
+                                    <div key={u.id} className="p-3 flex justify-between items-center">
+                                        <div>
+                                            <div className="font-medium text-gray-800">{u.materialName}</div>
+                                            <div className="text-xs text-gray-500">{u.date} • {u.quantityUsed} {u.unit}</div>
+                                            {u.notes && <div className="text-xs text-gray-400 italic">{u.notes}</div>}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => handleEditUsage(u)} className="text-blue-600 p-1"><Edit size={16} /></button>
+                                            <button onClick={() => handleDeleteUsage(u.id)} className="text-red-600 p-1"><Trash2 size={16} /></button>
                                         </div>
                                     </div>
                                 ))
                             )}
                         </div>
                     </div>
-                </>
+                </div>
             )}
 
-            {/* Tab 4: Daily Expenses List */}
+            {/* --- Tab 4: Expenses List --- */}
             {activeTab === 'list' && (
-                <>
-                    {/* Filter Section */}
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Month</label>
-                                <select
-                                    value={selectedMonth}
-                                    onChange={(e) => setSelectedMonth(e.target.value)}
-                                    className="w-full border rounded p-2"
-                                >
-                                    {Array.from({ length: 12 }, (_, i) => (
-                                        <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Year</label>
-                                <select
-                                    value={selectedYear}
-                                    onChange={(e) => setSelectedYear(e.target.value)}
-                                    className="w-full border rounded p-2"
-                                >
-                                    <option value="2023">2023</option>
-                                    <option value="2024">2024</option>
-                                    <option value="2025">2025</option>
-                                </select>
-                            </div>
+                <div className="space-y-4">
+                    {/* Filters */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm space-y-3">
+                        <div className="flex gap-2">
+                            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="flex-1 border rounded p-2 text-sm">
+                                {Array.from({ length: 12 }, (_, i) => (
+                                    <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
+                                ))}
+                            </select>
+                            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-24 border rounded p-2 text-sm">
+                                <option value="2023">2023</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                            </select>
+                        </div>
+                        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full border rounded p-2 text-sm">
+                            <option value="All">All Categories</option>
+                            <option value="Raw Material">Raw Material</option>
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="Equipment">Equipment</option>
+                            <option value="Salary">Salary</option>
+                            <option value="Rent">Rent</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    {/* Total Summary */}
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-100 flex justify-between items-center">
+                        <div>
+                            <div className="text-xs text-red-600 font-bold uppercase">Total Expenses</div>
+                            <div className="text-2xl font-bold text-gray-800">{formatCurrency(totalExpensesAmount)}</div>
+                        </div>
+                        <div className="text-right text-xs text-gray-500">
+                            {filteredExpenses.length} records
                         </div>
                     </div>
 
-                    {/* Total Card */}
-                    <div className="bg-red-50 p-4 rounded-xl shadow-sm border border-red-100">
-                        <div className="text-xs font-semibold uppercase text-red-700 mb-1">Daily Expenses</div>
-                        <p className="text-2xl font-bold text-gray-800">{formatCurrency(totalDailyExpenses)}</p>
-                        <p className="text-xs text-gray-600 mt-1">{filteredExpenses.length} transactions</p>
-                    </div>
-
-                    {/* Expense List */}
+                    {/* List */}
                     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="p-3 bg-gray-50 border-b">
-                            <h3 className="font-semibold text-gray-700">Expense Records</h3>
-                        </div>
-                        <div className="divide-y max-h-96 overflow-y-auto">
+                        <div className="divide-y">
                             {filteredExpenses.length === 0 ? (
-                                <div className="p-8 text-center text-gray-500">
-                                    No expenses found for this period
-                                </div>
+                                <div className="p-8 text-center text-gray-500">No expenses found</div>
                             ) : (
-                                filteredExpenses.map((expense) => (
-                                    <div key={expense.id} className="p-4">
+                                filteredExpenses.map(expense => (
+                                    <div key={expense.id} className="p-4 hover:bg-gray-50 transition-colors">
                                         <div className="flex justify-between items-start">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded font-medium">
+                                                    <span className={`px-2 py-0.5 text-xs rounded font-medium ${expense.category === 'Raw Material' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'
+                                                        }`}>
                                                         {expense.category}
                                                     </span>
                                                     <span className="text-xs text-gray-500">{expense.date}</span>
                                                 </div>
-                                                <p className="text-sm text-gray-800">{expense.description}</p>
+                                                <div className="font-medium text-gray-800">
+                                                    {expense.category === 'Raw Material' ? (
+                                                        <span>{expense.materialName} <span className="text-gray-500 text-xs">({expense.quantity} {expense.unit})</span></span>
+                                                    ) : (
+                                                        expense.notes || 'No description'
+                                                    )}
+                                                </div>
+                                                {expense.category === 'Raw Material' && expense.notes && (
+                                                    <div className="text-xs text-gray-400 mt-1">{expense.notes}</div>
+                                                )}
                                             </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-red-600">{formatCurrency(expense.amount)}</p>
+                                            <div className="text-right flex flex-col items-end gap-2">
+                                                <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => handleEditExpense(expense)} className="text-blue-600 p-1 bg-blue-50 rounded"><Edit size={14} /></button>
+                                                    <button onClick={() => handleDeleteExpense(expense.id)} className="text-red-600 p-1 bg-red-50 rounded"><Trash2 size={14} /></button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -521,7 +503,7 @@ const Expenses = () => {
                             )}
                         </div>
                     </div>
-                </>
+                </div>
             )}
         </div>
     );

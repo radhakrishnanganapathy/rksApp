@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { formatCurrency } from '../utils';
-import { Plus, Trash2, Save, ClipboardList, Package, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plus, Trash2, Save, ClipboardList, Package, Calendar, CheckCircle, XCircle, Clock, Edit } from 'lucide-react';
 
 const Orders = () => {
-    const { customers, items, stocks, orders, addOrder, updateOrderStatus, convertOrderToSale } = useData();
+    const { customers, items, stocks, orders, addOrder, updateOrder, updateOrderStatus, convertOrderToSale, deleteOrder } = useData();
 
     const [activeTab, setActiveTab] = useState('new'); // 'new' or 'list'
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [editingOrderId, setEditingOrderId] = useState(null);
 
     // Form state
     const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -60,7 +61,7 @@ const Orders = () => {
     const handleSaveOrder = () => {
         if (!selectedCustomer || orderItems.length === 0) return;
 
-        const newOrder = {
+        const orderData = {
             bookingDate,
             dueDate,
             customerId: Number(selectedCustomer),
@@ -71,9 +72,21 @@ const Orders = () => {
             paymentStatus
         };
 
-        addOrder(newOrder);
+        if (editingOrderId) {
+            updateOrder(editingOrderId, orderData);
+            alert('Order Updated Successfully!');
+            setEditingOrderId(null);
+        } else {
+            addOrder(orderData);
+            alert('Order Saved Successfully!');
+        }
 
         // Reset form
+        resetForm();
+        setActiveTab('list');
+    };
+
+    const resetForm = () => {
         setOrderItems([]);
         setSelectedCustomer('');
         setDiscount(0);
@@ -81,9 +94,29 @@ const Orders = () => {
         setDueDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
         setOrderStatus('waiting');
         setPaymentStatus('paid');
+    };
 
-        alert('Order Saved Successfully!');
-        setActiveTab('list');
+    const handleEditOrder = (order) => {
+        setEditingOrderId(order.id);
+        setSelectedCustomer(order.customerId);
+        setBookingDate(order.bookingDate);
+        setDueDate(order.dueDate);
+        setOrderItems(order.items);
+        setDiscount(order.discount);
+        setOrderStatus(order.status);
+        setPaymentStatus(order.paymentStatus);
+        setActiveTab('new');
+    };
+
+    const handleDeleteOrder = (orderId) => {
+        if (window.confirm('Are you sure you want to delete this order?')) {
+            deleteOrder(orderId);
+        }
+    };
+
+    const cancelEdit = () => {
+        setEditingOrderId(null);
+        resetForm();
     };
 
     const handleMarkDelivered = (orderId) => {
@@ -136,7 +169,7 @@ const Orders = () => {
                     className={`flex-1 py-2 px-4 rounded font-medium transition-colors ${activeTab === 'new' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'
                         }`}
                 >
-                    New Order
+                    {editingOrderId ? 'Edit Order' : 'New Order'}
                 </button>
                 <button
                     onClick={() => setActiveTab('list')}
@@ -325,8 +358,16 @@ const Orders = () => {
                             disabled={orderItems.length === 0}
                             className={`w-full mt-4 bg-green-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 font-semibold ${orderItems.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                            <Save size={20} /> Save Order
+                            <Save size={20} /> {editingOrderId ? 'Update Order' : 'Save Order'}
                         </button>
+                        {editingOrderId && (
+                            <button
+                                onClick={cancelEdit}
+                                className="w-full mt-2 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold"
+                            >
+                                Cancel Edit
+                            </button>
+                        )}
                     </div>
                 </>
             )}
@@ -390,6 +431,20 @@ const Orders = () => {
                                 <div className="flex justify-between items-center border-t pt-2">
                                     <span className="font-bold text-lg">{formatCurrency(order.total)}</span>
                                     <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleEditOrder(order)}
+                                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
+                                            title="Edit Order"
+                                        >
+                                            <Edit size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteOrder(order.id)}
+                                            className="bg-red-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
+                                            title="Delete Order"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
                                         {order.status === 'waiting' && (
                                             <>
                                                 <button
@@ -401,7 +456,7 @@ const Orders = () => {
                                                 </button>
                                                 <button
                                                     onClick={() => handleCancelOrder(order.id)}
-                                                    className="bg-red-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
+                                                    className="bg-orange-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
                                                 >
                                                     <XCircle size={14} />
                                                     Cancel

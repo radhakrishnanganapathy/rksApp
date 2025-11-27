@@ -32,11 +32,27 @@ dist-ssr
 # APK files (large binaries)
 *.apk
 
-# Android SDK (very large)
+# Android SDK (very large - 734MB)
 android-sdk/
+
+# Android build outputs (large)
+android/.gradle/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/build/
+android/local.properties
+*.class
+
+# Gradle wrapper (can be regenerated)
+.gradle/
 
 # Server dependencies
 server/node_modules/
 
 # Zip files
 *.zip
+
+# Other large files
+*.jar
+*.aar
+*.dex

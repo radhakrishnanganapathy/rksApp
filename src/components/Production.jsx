@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { Save, List, PlusCircle, Factory } from 'lucide-react';
+import { Save, List, PlusCircle, Factory, Trash2, Edit } from 'lucide-react';
 import { filterByMonthYear } from '../utils';
 
 const Production = () => {
-    const { items, production, addProduction } = useData();
+    const { items, production, addProduction, updateProduction, deleteProduction } = useData();
     const [activeTab, setActiveTab] = useState('add'); // 'add' or 'list'
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [item, setItem] = useState('');
     const [qty, setQty] = useState('');
+    const [editingId, setEditingId] = useState(null);
 
     // Filter states for list view
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -16,10 +17,40 @@ const Production = () => {
 
     const handleSubmit = () => {
         if (!item || !qty) return;
-        addProduction({ date, item, qty });
+
+        if (editingId) {
+            updateProduction(editingId, { date, item, qty });
+            alert('Production Updated!');
+            setEditingId(null);
+        } else {
+            addProduction({ date, item, qty });
+            alert('Production Added!');
+        }
+
         setItem('');
         setQty('');
-        alert('Production Added!');
+        setDate(new Date().toISOString().split('T')[0]);
+    };
+
+    const handleEdit = (prod) => {
+        setEditingId(prod.id);
+        setDate(prod.date);
+        setItem(prod.item);
+        setQty(prod.qty);
+        setActiveTab('add');
+    };
+
+    const handleDelete = (id) => {
+        if (window.confirm('Are you sure you want to delete this production record?')) {
+            deleteProduction(id);
+        }
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setItem('');
+        setQty('');
+        setDate(new Date().toISOString().split('T')[0]);
     };
 
     // Filtered production for list view
@@ -45,7 +76,7 @@ const Production = () => {
                         }`}
                     onClick={() => setActiveTab('add')}
                 >
-                    <PlusCircle size={16} /> Add Production
+                    <PlusCircle size={16} /> {editingId ? 'Edit Production' : 'Add Production'}
                 </button>
                 <button
                     className={`flex-1 py-2 text-sm font-medium rounded-md flex items-center justify-center gap-1 ${activeTab === 'list' ? 'bg-white shadow text-purple-600' : 'text-gray-500'
@@ -56,10 +87,12 @@ const Production = () => {
                 </button>
             </div>
 
-            {/* Add Production Tab */}
+            {/* Add/Edit Production Tab */}
             {activeTab === 'add' && (
                 <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
-                    <h3 className="font-semibold text-gray-700">Add Production Record</h3>
+                    <h3 className="font-semibold text-gray-700">
+                        {editingId ? 'Edit Production Record' : 'Add Production Record'}
+                    </h3>
                     <div>
                         <label className="block text-sm font-medium mb-1">Date</label>
                         <input
@@ -94,8 +127,16 @@ const Production = () => {
                         onClick={handleSubmit}
                         className="w-full bg-purple-600 text-white py-2 rounded flex items-center justify-center gap-2"
                     >
-                        <Save size={18} /> Save Production
+                        <Save size={18} /> {editingId ? 'Update Production' : 'Save Production'}
                     </button>
+                    {editingId && (
+                        <button
+                            onClick={cancelEdit}
+                            className="w-full bg-gray-200 text-gray-700 py-2 rounded"
+                        >
+                            Cancel Edit
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -157,8 +198,26 @@ const Production = () => {
                                                 <p className="font-medium text-gray-800">{prod.item}</p>
                                                 <p className="text-xs text-gray-500">{prod.date}</p>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-purple-600">{Number(prod.qty).toFixed(2)} kg</p>
+                                            <div className="flex items-center gap-3">
+                                                <div className="text-right">
+                                                    <p className="font-bold text-purple-600">{Number(prod.qty).toFixed(2)} kg</p>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => handleEdit(prod)}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                                                        title="Edit Production"
+                                                    >
+                                                        <Edit size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(prod.id)}
+                                                        className="p-2 text-red-600 hover:bg-red-50 rounded"
+                                                        title="Delete Production"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

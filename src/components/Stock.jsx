@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
-import { Plus, Package } from 'lucide-react';
+import { Plus, Package, Trash2, Edit } from 'lucide-react';
 
 const Stock = () => {
-    const { stocks, items, addStock } = useData();
+    const { stocks, items, addStock, updateStock, deleteStock } = useData();
     const [showAddModal, setShowAddModal] = useState(false);
+    const [editingStock, setEditingStock] = useState(null);
 
     // Add Stock Form State
     const [selectedItem, setSelectedItem] = useState('');
@@ -14,6 +15,35 @@ const Stock = () => {
         if (!selectedItem || !qty) return;
         addStock('products', selectedItem, qty);
         setShowAddModal(false);
+        setSelectedItem('');
+        setQty('');
+    };
+
+    const handleEditStock = (stock) => {
+        setEditingStock(stock);
+        setSelectedItem(stock.name);
+        setQty(stock.qty);
+        setShowAddModal(true);
+    };
+
+    const handleUpdateStock = () => {
+        if (!selectedItem || !qty) return;
+        updateStock('product', editingStock.name, { qty: Number(qty), name: selectedItem });
+        setShowAddModal(false);
+        setEditingStock(null);
+        setSelectedItem('');
+        setQty('');
+    };
+
+    const handleDeleteStock = (stock) => {
+        if (window.confirm(`Are you sure you want to delete ${stock.name} from stock?`)) {
+            deleteStock('product', stock.name);
+        }
+    };
+
+    const closeModal = () => {
+        setShowAddModal(false);
+        setEditingStock(null);
         setSelectedItem('');
         setQty('');
     };
@@ -41,22 +71,42 @@ const Stock = () => {
                                 </div>
                                 <span className="font-medium">{item.name}</span>
                             </div>
-                            <div className="text-right">
-                                <span className={`font-bold ${item.qty < 20 ? 'text-red-600' : 'text-gray-800'}`}>
-                                    {item.qty}
-                                </span>
-                                <span className="text-xs text-gray-500 ml-1">kg</span>
+                            <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                    <span className={`font-bold ${item.qty < 20 ? 'text-red-600' : 'text-gray-800'}`}>
+                                        {item.qty}
+                                    </span>
+                                    <span className="text-xs text-gray-500 ml-1">kg</span>
+                                </div>
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => handleEditStock(item)}
+                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                                        title="Edit Stock"
+                                    >
+                                        <Edit size={18} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteStock(item)}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded"
+                                        title="Delete Stock"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* Add Stock Modal */}
+            {/* Add/Edit Stock Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg p-6 w-full max-w-sm">
-                        <h3 className="text-lg font-bold mb-4">Add Product Stock</h3>
+                        <h3 className="text-lg font-bold mb-4">
+                            {editingStock ? 'Edit Product Stock' : 'Add Product Stock'}
+                        </h3>
 
                         <div className="space-y-3">
                             <div>
@@ -65,6 +115,7 @@ const Stock = () => {
                                     value={selectedItem}
                                     onChange={(e) => setSelectedItem(e.target.value)}
                                     className="w-full border rounded p-2"
+                                    disabled={!!editingStock}
                                 >
                                     <option value="">Select Product</option>
                                     {items.map(i => <option key={i} value={i}>{i}</option>)}
@@ -83,16 +134,16 @@ const Stock = () => {
 
                             <div className="flex gap-2 mt-4">
                                 <button
-                                    onClick={() => setShowAddModal(false)}
+                                    onClick={closeModal}
                                     className="flex-1 py-2 border rounded text-gray-600"
                                 >
                                     Cancel
                                 </button>
                                 <button
-                                    onClick={handleAddStock}
+                                    onClick={editingStock ? handleUpdateStock : handleAddStock}
                                     className="flex-1 py-2 bg-blue-600 text-white rounded"
                                 >
-                                    Add Stock
+                                    {editingStock ? 'Update Stock' : 'Add Stock'}
                                 </button>
                             </div>
                         </div>

@@ -17,6 +17,7 @@ export const DataProvider = ({ children }) => {
     const [attendance, setAttendance] = useState([]);
     const [orders, setOrders] = useState([]);
     const [rawMaterialPurchases, setRawMaterialPurchases] = useState([]);
+    const [rawMaterialUsage, setRawMaterialUsage] = useState([]);
     const [items] = useState(ITEMS);
     const [loading, setLoading] = useState(true);
 
@@ -53,13 +54,24 @@ export const DataProvider = ({ children }) => {
         materialName: p.material_name
     });
 
+    const mapExpense = (e) => ({
+        ...e,
+        materialName: e.material_name
+    });
+
+    const mapUsage = (u) => ({
+        ...u,
+        materialName: u.material_name,
+        quantityUsed: u.quantity_used
+    });
+
     // Fetch Initial Data
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const endpoints = [
                     'sales', 'production', 'expenses', 'stocks',
-                    'customers', 'employees', 'attendance', 'orders', 'raw-material-purchases'
+                    'customers', 'employees', 'attendance', 'orders', 'raw-material-purchases', 'raw-material-usage'
                 ];
 
                 const responses = await Promise.all(
@@ -77,13 +89,14 @@ export const DataProvider = ({ children }) => {
 
                 setSales(data[0]?.map(mapSale) || []);
                 setProduction(data[1] || []);
-                setExpenses(data[2] || []);
+                setExpenses(data[2]?.map(mapExpense) || []);
                 setStocks(data[3] || { products: [], rawMaterials: [] });
                 setCustomers(data[4] || []);
                 setEmployees(data[5]?.map(mapEmployee) || []);
                 setAttendance(data[6]?.map(mapAttendance) || []);
                 setOrders(data[7]?.map(mapOrder) || []);
                 setRawMaterialPurchases(data[8]?.map(mapPurchase) || []);
+                setRawMaterialUsage(data[9]?.map(mapUsage) || []);
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
@@ -157,18 +170,132 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify(newExpense)
             });
             const savedExpense = await res.json();
-            setExpenses([savedExpense, ...expenses]);
+            const mappedExpense = mapExpense(savedExpense);
+            setExpenses(prev => [mappedExpense, ...prev]);
+
+            // Update Stock if Raw Material
+            if (mappedExpense.category === 'Raw Material' && mappedExpense.unit !== '₹' && mappedExpense.quantity) {
+                addStock('raw_material', mappedExpense.materialName, mappedExpense.quantity, mappedExpense.unit);
+            }
         } catch (err) {
             console.error("Error adding expense:", err);
         }
     };
 
-    const addStock = async (type, item, qty) => {
+    const updateExpense = async (id, updatedData) => {
+        try {
+            const oldExpense = expenses.find(e => e.id === id);
+            const res = await fetch(`${API_URL}/expenses/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            });
+            const savedExpense = await res.json();
+            const mappedExpense = mapExpense(savedExpense);
+
+            setExpenses(prev => prev.map(item => item.id === id ? mappedExpense : item));
+
+            // Handle Stock Updates
+            // 1. Revert old expense effect
+            if (oldExpense && oldExpense.category === 'Raw Material' && oldExpense.unit !== '₹' && oldExpense.quantity) {
+                addStock('raw_material', oldExpense.materialName, -Number(oldExpense.quantity), oldExpense.unit);
+            }
+            // 2. Apply new expense effect
+            if (mappedExpense.category === 'Raw Material' && mappedExpense.unit !== '₹' && mappedExpense.quantity) {
+                addStock('raw_material', mappedExpense.materialName, Number(mappedExpense.quantity), mappedExpense.unit);
+            }
+
+        } catch (err) {
+            console.error("Error updating expense:", err);
+        }
+    };
+
+    const deleteExpense = async (id) => {
+        try {
+            const oldExpense = expenses.find(e => e.id === id);
+            await fetch(`${API_URL}/expenses/${id}`, { method: 'DELETE' });
+            setExpenses(prev => prev.filter(item => item.id !== id));
+
+            // Revert Stock
+            if (oldExpense && oldExpense.category === 'Raw Material' && oldExpense.unit !== '₹' && oldExpense.quantity) {
+                addStock('raw_material', oldExpense.materialName, -Number(oldExpense.quantity), oldExpense.unit);
+            }
+        } catch (err) {
+            console.error("Error deleting expense:", err);
+        }
+    };
+
+    // Raw Material Usage Functions
+    const addRawMaterialUsage = async (usage) => {
+        const newUsage = { ...usage, id: Date.now() };
+        try {
+            const res = await fetch(`${API_URL}/raw-material-usage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newUsage)
+            });
+            const savedUsage = await res.json();
+            const mappedUsage = mapUsage(savedUsage);
+            setRawMaterialUsage(prev => [mappedUsage, ...prev]);
+
+            // Decrease Stock
+            addStock('raw_material', mappedUsage.materialName, -Number(mappedUsage.quantityUsed), mappedUsage.unit);
+        } catch (err) {
+            console.error("Error adding usage:", err);
+        }
+    };
+
+    const updateRawMaterialUsage = async (id, updatedData) => {
+        try {
+            const oldUsage = rawMaterialUsage.find(u => u.id === id);
+            const res = await fetch(`${API_URL}/raw-material-usage/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            });
+            const savedUsage = await res.json();
+            const mappedUsage = mapUsage(savedUsage);
+
+            setRawMaterialUsage(prev => prev.map(item => item.id === id ? mappedUsage : item));
+
+            // Revert old usage (add back)
+            if (oldUsage) {
+                addStock('raw_material', oldUsage.materialName, Number(oldUsage.quantityUsed), oldUsage.unit);
+            }
+            // Apply new usage (subtract)
+            addStock('raw_material', mappedUsage.materialName, -Number(mappedUsage.quantityUsed), mappedUsage.unit);
+
+        } catch (err) {
+            console.error("Error updating usage:", err);
+        }
+    };
+
+    const deleteRawMaterialUsage = async (id) => {
+        try {
+            const oldUsage = rawMaterialUsage.find(u => u.id === id);
+            await fetch(`${API_URL}/raw-material-usage/${id}`, { method: 'DELETE' });
+            setRawMaterialUsage(prev => prev.filter(item => item.id !== id));
+
+            // Revert usage (add back to stock)
+            if (oldUsage) {
+                addStock('raw_material', oldUsage.materialName, Number(oldUsage.quantityUsed), oldUsage.unit);
+            }
+        } catch (err) {
+            console.error("Error deleting usage:", err);
+        }
+    };
+
+    const addStock = async (type, item, qty, unit) => {
         try {
             await fetch(`${API_URL}/stocks`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: type === 'products' ? 'product' : 'raw_material', name: item, qty: Number(qty) })
+                body: JSON.stringify({
+                    type: type === 'products' ? 'product' : 'raw_material',
+                    name: item,
+                    qty: Number(qty),
+                    unit: unit || 'kg'
+                })
             });
             const stocksRes = await fetch(`${API_URL}/stocks`);
             setStocks(await stocksRes.json());
@@ -388,8 +515,7 @@ export const DataProvider = ({ children }) => {
     const deleteProduction = (id) => deleteItem('production', id, setProduction, production);
     const updateProduction = (id, data) => updateItem('production', id, data, setProduction, production);
 
-    const deleteExpense = (id) => deleteItem('expenses', id, setExpenses, expenses);
-    const updateExpense = (id, data) => updateItem('expenses', id, data, setExpenses, expenses);
+
 
     const deleteStock = async (type, name) => {
         try {
@@ -441,6 +567,7 @@ export const DataProvider = ({ children }) => {
             attendance, markAttendance, deleteAttendance,
             orders, addOrder, updateOrderStatus, convertOrderToSale, markOrderAsPaid, updateOrderAmountReceived, deleteOrder, updateOrder,
             rawMaterialPurchases, addRawMaterialPurchase, deleteRawMaterialPurchase, updateRawMaterialPurchase,
+            rawMaterialUsage, addRawMaterialUsage, deleteRawMaterialUsage, updateRawMaterialUsage,
             items,
             loading
         }}>

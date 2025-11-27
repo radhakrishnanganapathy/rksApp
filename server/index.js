@@ -59,10 +59,12 @@ const initializeTables = async () => {
             CREATE TABLE IF NOT EXISTS expenses (
                 id BIGINT PRIMARY KEY,
                 date DATE NOT NULL,
-                description TEXT NOT NULL,
+                category TEXT NOT NULL DEFAULT 'Other',
+                material_name TEXT,
+                unit TEXT,
+                quantity NUMERIC,
                 amount NUMERIC NOT NULL,
-                category TEXT,
-                qty TEXT
+                notes TEXT
             );
         `);
 
@@ -116,6 +118,18 @@ const initializeTables = async () => {
                 material_name TEXT NOT NULL,
                 qty NUMERIC NOT NULL,
                 cost NUMERIC NOT NULL
+            );
+        `);
+
+        // Raw Material Usage Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS raw_material_usage (
+                id BIGINT PRIMARY KEY,
+                date DATE NOT NULL,
+                material_name TEXT NOT NULL,
+                quantity_used NUMERIC NOT NULL,
+                unit TEXT NOT NULL,
+                notes TEXT
             );
         `);
 
@@ -352,11 +366,11 @@ app.get('/api/expenses', async (req, res) => {
 });
 
 app.post('/api/expenses', async (req, res) => {
-    const { id, date, description, amount, category, qty } = req.body;
+    const { id, date, category, materialName, unit, quantity, amount, notes } = req.body;
     try {
         const result = await db.query(
-            'INSERT INTO expenses (id, date, description, amount, category, qty) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [id, date, description, amount, category, qty]
+            'INSERT INTO expenses (id, date, category, material_name, unit, quantity, amount, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [id, date, category || 'Other', materialName, unit, quantity, amount, notes]
         );
         res.json(result.rows[0]);
     } catch (err) {
@@ -366,7 +380,7 @@ app.post('/api/expenses', async (req, res) => {
 
 app.put('/api/expenses/:id', async (req, res) => {
     const { id } = req.params;
-    const { date, description, amount, category, qty } = req.body;
+    const { date, category, materialName, unit, quantity, amount, notes } = req.body;
     try {
         let query = 'UPDATE expenses SET ';
         const params = [];
@@ -377,9 +391,24 @@ app.put('/api/expenses/:id', async (req, res) => {
             params.push(date);
             paramCount++;
         }
-        if (description !== undefined) {
-            query += `description = $${paramCount}, `;
-            params.push(description);
+        if (category !== undefined) {
+            query += `category = $${paramCount}, `;
+            params.push(category);
+            paramCount++;
+        }
+        if (materialName !== undefined) {
+            query += `material_name = $${paramCount}, `;
+            params.push(materialName);
+            paramCount++;
+        }
+        if (unit !== undefined) {
+            query += `unit = $${paramCount}, `;
+            params.push(unit);
+            paramCount++;
+        }
+        if (quantity !== undefined) {
+            query += `quantity = $${paramCount}, `;
+            params.push(quantity);
             paramCount++;
         }
         if (amount !== undefined) {
@@ -387,14 +416,9 @@ app.put('/api/expenses/:id', async (req, res) => {
             params.push(amount);
             paramCount++;
         }
-        if (category !== undefined) {
-            query += `category = $${paramCount}, `;
-            params.push(category);
-            paramCount++;
-        }
-        if (qty !== undefined) {
-            query += `qty = $${paramCount}, `;
-            params.push(qty);
+        if (notes !== undefined) {
+            query += `notes = $${paramCount}, `;
+            params.push(notes);
             paramCount++;
         }
 
@@ -761,6 +785,87 @@ app.delete('/api/raw-material-purchases/:id', async (req, res) => {
             return res.status(404).json({ error: 'Raw material purchase not found' });
         }
         res.json({ message: 'Raw material purchase deleted successfully', purchase: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Raw Material Usage ---
+app.get('/api/raw-material-usage', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM raw_material_usage ORDER BY date DESC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/raw-material-usage', async (req, res) => {
+    const { id, date, materialName, quantityUsed, unit, notes } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO raw_material_usage (id, date, material_name, quantity_used, unit, notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [id, date, materialName, quantityUsed, unit, notes]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/raw-material-usage/:id', async (req, res) => {
+    const { id } = req.params;
+    const { date, materialName, quantityUsed, unit, notes } = req.body;
+    try {
+        let query = 'UPDATE raw_material_usage SET ';
+        const params = [];
+        let paramCount = 1;
+
+        if (date !== undefined) {
+            query += `date = $${paramCount}, `;
+            params.push(date);
+            paramCount++;
+        }
+        if (materialName !== undefined) {
+            query += `material_name = $${paramCount}, `;
+            params.push(materialName);
+            paramCount++;
+        }
+        if (quantityUsed !== undefined) {
+            query += `quantity_used = $${paramCount}, `;
+            params.push(quantityUsed);
+            paramCount++;
+        }
+        if (unit !== undefined) {
+            query += `unit = $${paramCount}, `;
+            params.push(unit);
+            paramCount++;
+        }
+        if (notes !== undefined) {
+            query += `notes = $${paramCount}, `;
+            params.push(notes);
+            paramCount++;
+        }
+
+        query = query.slice(0, -2);
+        query += ` WHERE id = $${paramCount} RETURNING *`;
+        params.push(id);
+
+        const result = await db.query(query, params);
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/raw-material-usage/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM raw_material_usage WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Raw material usage not found' });
+        }
+        res.json({ message: 'Raw material usage deleted successfully', usage: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
