@@ -23,6 +23,20 @@ dist-ssr
 *.sln
 *.sw?
 
+# Environment files (contain sensitive data)
+.env
+.env.production
+.env.local
+.env.*.local
 
+# APK files (large binaries)
+*.apk
+
+# Android SDK (very large)
+android-sdk/
+
+# Server dependencies
+server/node_modules/
+
+# Zip files
 *.zip
-android-sdk/cmdtools.zip
