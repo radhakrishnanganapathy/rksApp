@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { formatCurrency } from '../utils';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 
-const LastBuy = () => {
+const LastBuy = ({ onNavigateBack }) => {
     const { customers, sales } = useData();
     const [expandedCustomerId, setExpandedCustomerId] = useState(null);
 
@@ -29,7 +29,12 @@ const LastBuy = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            <h2 className="text-xl font-bold text-gray-800">Customer Last Purchases</h2>
+            <div className="flex items-center gap-2">
+                <button onClick={onNavigateBack} className="p-1 rounded-full hover:bg-gray-200">
+                    <ArrowLeft size={24} className="text-gray-600" />
+                </button>
+                <h2 className="text-xl font-bold text-gray-800">Customer Last Purchases</h2>
+            </div>
             <div className="grid gap-3">
                 {customers.map(c => {
                     const purchase = lastPurchases[c.id];
@@ -37,12 +42,12 @@ const LastBuy = () => {
                     const rowClass = getRowStyle(purchase.date);
                     const diffDays = Math.floor((today - new Date(purchase.date)) / (1000 * 60 * 60 * 24));
                     return (
-                        <div key={c.id} className={`${rowClass} p-4 rounded-lg shadow-sm`}>
+                        <div key={c.id} className={`${rowClass} p - 4 rounded - lg shadow - sm`}>
                             <button
                                 onClick={() => setExpandedCustomerId(expandedCustomerId === c.id ? null : c.id)}
                                 className="w-full flex items-center text-left"
                             >
-                                <span className={`h-2 w-2 rounded-full mr-2 ${diffDays <= 4 ? 'bg-green-600' : 'bg-red-600'}`}></span>
+                                <span className={`h - 2 w - 2 rounded - full mr - 2 ${diffDays <= 4 ? 'bg-green-600' : 'bg-red-600'} `}></span>
                                 <span className="font-medium text-gray-800 flex-1">{c.name}</span>
                                 <span className="text-sm text-gray-600">{new Date(purchase.date).toLocaleDateString()}</span>
                             </button>

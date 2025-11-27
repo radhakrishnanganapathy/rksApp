@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { Save, Wallet, Package, TrendingDown, List, Trash2, Edit, X } from 'lucide-react';
+import { Save, Wallet, Package, TrendingDown, List, Trash2, Edit, X, ArrowLeft } from 'lucide-react';
 import { formatCurrency, filterByMonthYear } from '../utils';
 
-const Expenses = () => {
+const Expenses = ({ onNavigateBack }) => {
     const {
         expenses, addExpense, updateExpense, deleteExpense,
         stocks,
@@ -71,14 +71,20 @@ const Expenses = () => {
             notes: expNotes
         };
 
-        if (expId) {
-            await updateExpense(expId, expenseData);
-            alert('Expense Updated!');
-        } else {
-            await addExpense(expenseData);
-            alert('Expense Added!');
+        try {
+            if (expId) {
+                await updateExpense(expId, expenseData);
+                alert('Expense Updated!');
+            } else {
+                await addExpense(expenseData);
+                alert('Expense Added!');
+            }
+            resetExpForm();
+            setActiveTab('list');
+        } catch (error) {
+            console.error("Failed to save expense:", error);
+            alert("Failed to save expense. Please try again.");
         }
-        resetExpForm();
     };
 
     const handleEditExpense = (expense) => {
@@ -184,10 +190,15 @@ const Expenses = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <Wallet size={24} />
-                Expenses & Raw Materials
-            </h2>
+            <div className="flex items-center gap-2">
+                <button onClick={onNavigateBack} className="p-1 rounded-full hover:bg-gray-200">
+                    <ArrowLeft size={24} className="text-gray-600" />
+                </button>
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <Wallet size={24} />
+                    Expenses & Raw Materials
+                </h2>
+            </div>
 
             {/* Tabs */}
             <div className="flex p-1 bg-gray-100 rounded-lg text-xs overflow-x-auto">
@@ -272,6 +283,7 @@ const Expenses = () => {
                                             <option value="kg">kg</option>
                                             <option value="lt">lt</option>
                                             <option value="count">count</option>
+                                            <option value="box">box</option>
                                             <option value="₹">Direct Amount (₹)</option>
                                         </select>
                                     </div>

@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { formatCurrency } from '../utils';
-import { TrendingUp, TrendingDown, DollarSign, Package, Users, ShoppingCart } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Package, Users, ShoppingCart, ArrowLeft } from 'lucide-react';
 
-const Stats = () => {
+const Stats = ({ onNavigateBack }) => {
     const { sales, production, expenses, attendance, employees, customers } = useData();
     const [selectedMonth, setSelectedMonth] = useState('');
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -136,7 +136,12 @@ const Stats = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            <h2 className="text-xl font-bold text-gray-800">Statistics</h2>
+            <div className="flex items-center gap-2">
+                <button onClick={onNavigateBack} className="p-1 rounded-full hover:bg-gray-200">
+                    <ArrowLeft size={24} className="text-gray-600" />
+                </button>
+                <h2 className="text-xl font-bold text-gray-800">Statistics</h2>
+            </div>
 
             {/* Filter Section */}
             <div className="bg-white p-4 rounded-lg shadow-sm space-y-3">

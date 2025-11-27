@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { filterByMonthYear, formatCurrency } from '../utils';
-import { Filter, TrendingUp } from 'lucide-react';
+import { Filter, TrendingUp, ArrowLeft } from 'lucide-react';
 
-const Analysis = () => {
+const Analysis = ({ onNavigateBack }) => {
     const { sales, production, customers } = useData();
     const [filterType, setFilterType] = useState('customer_purchases');
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -75,7 +75,12 @@ const Analysis = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            <h2 className="text-xl font-bold text-gray-800">Analysis & Reports</h2>
+            <div className="flex items-center gap-2">
+                <button onClick={onNavigateBack} className="p-1 rounded-full hover:bg-gray-200">
+                    <ArrowLeft size={24} className="text-gray-600" />
+                </button>
+                <h2 className="text-xl font-bold text-gray-800">Analysis & Reports</h2>
+            </div>
 
             {/* Filter Type Selection */}
             <div className="bg-white p-4 rounded-lg shadow-sm space-y-3">

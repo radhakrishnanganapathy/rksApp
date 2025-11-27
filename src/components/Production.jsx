@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { Save, List, PlusCircle, Factory, Trash2, Edit } from 'lucide-react';
+import { Save, List, PlusCircle, Factory, Trash2, Edit, ArrowLeft } from 'lucide-react';
 import { filterByMonthYear } from '../utils';
 
-const Production = () => {
+const Production = ({ onNavigateBack }) => {
     const { items, production, addProduction, updateProduction, deleteProduction } = useData();
     const [activeTab, setActiveTab] = useState('add'); // 'add' or 'list'
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -64,10 +64,15 @@ const Production = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <Factory size={24} />
-                Production
-            </h2>
+            <div className="flex items-center gap-2">
+                <button onClick={onNavigateBack} className="p-1 rounded-full hover:bg-gray-200">
+                    <ArrowLeft size={24} className="text-gray-600" />
+                </button>
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <Factory size={24} />
+                    Production
+                </h2>
+            </div>
 
             {/* View Mode Toggle */}
             <div className="flex p-1 bg-gray-100 rounded-lg">

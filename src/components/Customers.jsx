@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
-import { Save, UserPlus, Phone, MapPin, Store, Trash2, Edit } from 'lucide-react';
+import { Save, UserPlus, Phone, MapPin, Store, Trash2, Edit, ArrowLeft } from 'lucide-react';
 
-const Customers = () => {
+const Customers = ({ onNavigateBack }) => {
     const { customers, addCustomer, updateCustomer, deleteCustomer } = useData();
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState(null);
@@ -50,7 +50,12 @@ const Customers = () => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-800">Customers</h2>
+                <div className="flex items-center gap-2">
+                    <button onClick={onNavigateBack} className="p-1 rounded-full hover:bg-gray-200">
+                        <ArrowLeft size={24} className="text-gray-600" />
+                    </button>
+                    <h2 className="text-xl font-bold text-gray-800">Customers</h2>
+                </div>
                 <button
                     onClick={() => setShowAddModal(true)}
                     className="bg-primary-600 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 text-sm"

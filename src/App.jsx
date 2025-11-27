@@ -34,25 +34,25 @@ function App() {
       case 'more':
         return <More onNavigate={setActiveTab} />;
       case 'production':
-        return <Production />;
+        return <Production onNavigateBack={() => setActiveTab('more')} />;
       case 'expenses':
-        return <Expenses />;
+        return <Expenses onNavigateBack={() => setActiveTab('more')} />;
       case 'employees':
-        return <Employees />;
+        return <Employees onNavigateBack={() => setActiveTab('more')} />;
       case 'customers':
-        return <Customers />;
+        return <Customers onNavigateBack={() => setActiveTab('more')} />;
       case 'stats':
-        return <Stats />;
+        return <Stats onNavigateBack={() => setActiveTab('more')} />;
       case 'analysis':
-        return <Analysis />;
+        return <Analysis onNavigateBack={() => setActiveTab('more')} />;
       case 'lastbuy':
-        return <LastBuy />;
+        return <LastBuy onNavigateBack={() => setActiveTab('more')} />;
       case 'compare':
-        return <Compare />;
+        return <Compare onNavigateBack={() => setActiveTab('more')} />;
       case 'orders':
-        return <Orders />;
+        return <Orders onNavigateBack={() => setActiveTab('more')} />;
       case 'balance':
-        return <BalanceAmount />;
+        return <BalanceAmount onNavigateBack={() => setActiveTab('more')} />;
       default:
         return <Dashboard />;
     }

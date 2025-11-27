@@ -2,9 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { filterByMonthYear, formatCurrency } from '../utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { GitCompare } from 'lucide-react';
+import { GitCompare, ArrowLeft } from 'lucide-react';
 
-const Compare = () => {
+const Compare = ({ onNavigateBack }) => {
     const { sales } = useData();
 
     // Period 1 selection
@@ -83,10 +83,15 @@ const Compare = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <GitCompare size={24} />
-                Compare Sales
-            </h2>
+            <div className="flex items-center gap-2">
+                <button onClick={onNavigateBack} className="p-1 rounded-full hover:bg-gray-200">
+                    <ArrowLeft size={24} className="text-gray-600" />
+                </button>
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <GitCompare size={24} />
+                    Compare Sales
+                </h2>
+            </div>
 
             {/* Period Selectors */}
             <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">

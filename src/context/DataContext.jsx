@@ -169,6 +169,7 @@ export const DataProvider = ({ children }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newExpense)
             });
+            if (!res.ok) throw new Error('Failed to add expense');
             const savedExpense = await res.json();
             const mappedExpense = mapExpense(savedExpense);
             setExpenses(prev => [mappedExpense, ...prev]);
@@ -179,6 +180,7 @@ export const DataProvider = ({ children }) => {
             }
         } catch (err) {
             console.error("Error adding expense:", err);
+            throw err;
         }
     };
 
@@ -207,6 +209,7 @@ export const DataProvider = ({ children }) => {
 
         } catch (err) {
             console.error("Error updating expense:", err);
+            throw err;
         }
     };
 
@@ -222,6 +225,7 @@ export const DataProvider = ({ children }) => {
             }
         } catch (err) {
             console.error("Error deleting expense:", err);
+            throw err;
         }
     };
 

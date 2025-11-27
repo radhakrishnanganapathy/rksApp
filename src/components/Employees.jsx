@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { Save, UserPlus, Check, X, Calendar, DollarSign } from 'lucide-react';
+import { Save, UserPlus, Check, X, Calendar, DollarSign, ArrowLeft } from 'lucide-react';
 import { formatCurrency, filterByMonthYear } from '../utils';
 
-const Employees = () => {
+const Employees = ({ onNavigateBack }) => {
     const { employees, attendance, addEmployee, markAttendance } = useData();
     const [showAddModal, setShowAddModal] = useState(false);
     const [name, setName] = useState('');
@@ -72,7 +72,12 @@ const Employees = () => {
     return (
         <div className="space-y-6 pb-20">
             <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-800">Employees</h2>
+                <div className="flex items-center gap-2">
+                    <button onClick={onNavigateBack} className="p-1 rounded-full hover:bg-gray-200">
+                        <ArrowLeft size={24} className="text-gray-600" />
+                    </button>
+                    <h2 className="text-xl font-bold text-gray-800">Employees</h2>
+                </div>
                 <button
                     onClick={() => setShowAddModal(true)}
                     className="bg-primary-600 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 text-sm"
@@ -127,10 +132,10 @@ const Employees = () => {
                                         <button
                                             onClick={() => handleAttendanceToggle(emp.id, emp.status)}
                                             className={`px-4 py-2 rounded-lg flex items-center gap-2 ${emp.status === 'present'
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : emp.status === 'absent'
-                                                        ? 'bg-red-100 text-red-700'
-                                                        : 'bg-gray-100 text-gray-700'
+                                                ? 'bg-green-100 text-green-700'
+                                                : emp.status === 'absent'
+                                                    ? 'bg-red-100 text-red-700'
+                                                    : 'bg-gray-100 text-gray-700'
                                                 }`}
                                         >
                                             {emp.status === 'present' ? (

@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { DollarSign, Save, CheckCircle } from 'lucide-react';
+import { DollarSign, Save, CheckCircle, ArrowLeft } from 'lucide-react';
 
-const BalanceAmount = () => {
+const BalanceAmount = ({ onNavigateBack }) => {
     const { sales, orders, customers, updateSaleAmountReceived, updateOrderAmountReceived } = useData();
 
     const [amountInputs, setAmountInputs] = useState({});
@@ -105,10 +105,15 @@ const BalanceAmount = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <DollarSign size={24} />
-                Balance Amount
-            </h2>
+            <div className="flex items-center gap-2">
+                <button onClick={onNavigateBack} className="p-1 rounded-full hover:bg-gray-200">
+                    <ArrowLeft size={24} className="text-gray-600" />
+                </button>
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <DollarSign size={24} />
+                    Balance Amount
+                </h2>
+            </div>
 
             {/* Total Balance Card */}
             <div className="bg-gradient-to-r from-red-50 to-orange-50 p-6 rounded-xl shadow-sm border border-red-100">

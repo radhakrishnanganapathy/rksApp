@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { formatCurrency } from '../utils';
-import { Plus, Trash2, Save, ClipboardList, Package, Calendar, CheckCircle, XCircle, Clock, Edit } from 'lucide-react';
+import { Plus, Trash2, Save, ClipboardList, Package, Calendar, CheckCircle, XCircle, Clock, Edit, ArrowLeft } from 'lucide-react';
 
-const Orders = () => {
+const Orders = ({ onNavigateBack }) => {
     const { customers, items, stocks, orders, addOrder, updateOrder, updateOrderStatus, convertOrderToSale, deleteOrder } = useData();
 
     const [activeTab, setActiveTab] = useState('new'); // 'new' or 'list'
@@ -157,10 +157,15 @@ const Orders = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <ClipboardList size={24} />
-                Orders
-            </h2>
+            <div className="flex items-center gap-2">
+                <button onClick={onNavigateBack} className="p-1 rounded-full hover:bg-gray-200">
+                    <ArrowLeft size={24} className="text-gray-600" />
+                </button>
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <ClipboardList size={24} />
+                    Orders
+                </h2>
+            </div>
 
             {/* Tabs */}
             <div className="flex gap-2 bg-white p-2 rounded-lg shadow-sm">
