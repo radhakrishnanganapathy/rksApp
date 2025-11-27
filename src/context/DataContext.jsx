@@ -6,7 +6,7 @@ const DataContext = createContext();
 export const useData = () => useContext(DataContext);
 
 export const DataProvider = ({ children }) => {
-    const API_URL = 'https://rksapp.onrender.com/api';
+    const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
 
     const [sales, setSales] = useState([]);
     const [production, setProduction] = useState([]);
@@ -19,6 +19,39 @@ export const DataProvider = ({ children }) => {
     const [rawMaterialPurchases, setRawMaterialPurchases] = useState([]);
     const [items] = useState(ITEMS);
     const [loading, setLoading] = useState(true);
+
+    // --- Data Mappers (Backend snake_case -> Frontend camelCase) ---
+    const mapSale = (s) => ({
+        ...s,
+        customerId: s.customer_id,
+        paymentStatus: s.payment_status,
+        amountReceived: s.amount_received
+    });
+
+    const mapOrder = (o) => ({
+        ...o,
+        bookingDate: o.booking_date,
+        dueDate: o.due_date,
+        customerId: o.customer_id,
+        paymentStatus: o.payment_status,
+        amountReceived: o.amount_received
+    });
+
+    const mapEmployee = (e) => ({
+        ...e,
+        salaryType: e.salary_type,
+        dailySalary: e.daily_salary
+    });
+
+    const mapAttendance = (a) => ({
+        ...a,
+        employeeId: a.employee_id
+    });
+
+    const mapPurchase = (p) => ({
+        ...p,
+        materialName: p.material_name
+    });
 
     // Fetch Initial Data
     useEffect(() => {
@@ -42,15 +75,15 @@ export const DataProvider = ({ children }) => {
 
                 const data = await Promise.all(responses.map(res => res.json()));
 
-                setSales(data[0] || []);
+                setSales(data[0]?.map(mapSale) || []);
                 setProduction(data[1] || []);
                 setExpenses(data[2] || []);
                 setStocks(data[3] || { products: [], rawMaterials: [] });
                 setCustomers(data[4] || []);
-                setEmployees(data[5] || []);
-                setAttendance(data[6] || []);
-                setOrders(data[7] || []);
-                setRawMaterialPurchases(data[8] || []);
+                setEmployees(data[5]?.map(mapEmployee) || []);
+                setAttendance(data[6]?.map(mapAttendance) || []);
+                setOrders(data[7]?.map(mapOrder) || []);
+                setRawMaterialPurchases(data[8]?.map(mapPurchase) || []);
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
@@ -70,11 +103,7 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify(newSale)
             });
             const savedSale = await res.json();
-            setSales([savedSale, ...sales]);
-
-            // Update local stock state optimistically (backend doesn't auto-update stock table based on sales yet, logic is in frontend)
-            // Ideally backend should handle this transaction. For now, we update stock in frontend state AND send stock update to backend?
-            // The backend /api/stocks POST endpoint is an upsert. We can use that.
+            setSales([mapSale(savedSale), ...sales]);
 
             // Update stocks for each item
             for (const item of sale.items) {
@@ -172,7 +201,7 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify(newEmployee)
             });
             const savedEmployee = await res.json();
-            setEmployees([...employees, savedEmployee]);
+            setEmployees([...employees, mapEmployee(savedEmployee)]);
         } catch (err) {
             console.error("Error adding employee:", err);
         }
@@ -187,7 +216,8 @@ export const DataProvider = ({ children }) => {
             });
             // Refetch attendance
             const attendanceRes = await fetch(`${API_URL}/attendance`);
-            setAttendance(await attendanceRes.json());
+            const attendanceData = await attendanceRes.json();
+            setAttendance(attendanceData.map(mapAttendance));
         } catch (err) {
             console.error("Error marking attendance:", err);
         }
@@ -202,7 +232,7 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify(newOrder)
             });
             const savedOrder = await res.json();
-            setOrders([savedOrder, ...orders]);
+            setOrders([mapOrder(savedOrder), ...orders]);
         } catch (err) {
             console.error("Error adding order:", err);
         }
@@ -216,7 +246,7 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify({ status })
             });
             const updatedOrder = await res.json();
-            setOrders(orders.map(o => o.id === orderId ? updatedOrder : o));
+            setOrders(orders.map(o => o.id === orderId ? mapOrder(updatedOrder) : o));
         } catch (err) {
             console.error("Error updating order status:", err);
         }
@@ -248,7 +278,7 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify(newPurchase)
             });
             const savedPurchase = await res.json();
-            setRawMaterialPurchases([savedPurchase, ...rawMaterialPurchases]);
+            setRawMaterialPurchases([mapPurchase(savedPurchase), ...rawMaterialPurchases]);
 
             // Update stock
             await fetch(`${API_URL}/stocks`, {
@@ -272,7 +302,7 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify({ paymentStatus: 'paid' })
             });
             const updatedSale = await res.json();
-            setSales(sales.map(s => s.id === saleId ? updatedSale : s));
+            setSales(sales.map(s => s.id === saleId ? mapSale(updatedSale) : s));
         } catch (err) {
             console.error("Error marking sale as paid:", err);
         }
@@ -286,7 +316,7 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify({ paymentStatus: 'paid' })
             });
             const updatedOrder = await res.json();
-            setOrders(orders.map(o => o.id === orderId ? updatedOrder : o));
+            setOrders(orders.map(o => o.id === orderId ? mapOrder(updatedOrder) : o));
         } catch (err) {
             console.error("Error marking order as paid:", err);
         }
@@ -300,7 +330,7 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify({ amountReceived: amount })
             });
             const updatedSale = await res.json();
-            setSales(sales.map(s => s.id === saleId ? updatedSale : s));
+            setSales(sales.map(s => s.id === saleId ? mapSale(updatedSale) : s));
         } catch (err) {
             console.error("Error updating sale amount:", err);
         }
@@ -314,23 +344,103 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify({ amountReceived: amount })
             });
             const updatedOrder = await res.json();
-            setOrders(orders.map(o => o.id === orderId ? updatedOrder : o));
+            setOrders(orders.map(o => o.id === orderId ? mapOrder(updatedOrder) : o));
         } catch (err) {
             console.error("Error updating order amount:", err);
         }
     };
 
+    // Generic Helper Functions
+    const deleteItem = async (endpoint, id, stateSetter, currentState) => {
+        try {
+            const res = await fetch(`${API_URL}/${endpoint}/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                // Convert both to strings for comparison since backend returns string IDs
+                stateSetter(currentState.filter(item => String(item.id) !== String(id)));
+            }
+        } catch (err) {
+            console.error(`Error deleting from ${endpoint}:`, err);
+        }
+    };
+
+    const updateItem = async (endpoint, id, data, stateSetter, currentState, mapper) => {
+        try {
+            const res = await fetch(`${API_URL}/${endpoint}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const updatedItem = await res.json();
+            const mappedItem = mapper ? mapper(updatedItem) : updatedItem;
+            stateSetter(currentState.map(item => item.id === id ? mappedItem : item));
+        } catch (err) {
+            console.error(`Error updating ${endpoint}:`, err);
+        }
+    };
+
+    // Specific Delete/Update Functions
+    const deleteSale = (id) => deleteItem('sales', id, setSales, sales);
+    const updateSale = (id, data) => updateItem('sales', id, data, setSales, sales, mapSale);
+
+    const deleteOrder = (id) => deleteItem('orders', id, setOrders, orders);
+    const updateOrder = (id, data) => updateItem('orders', id, data, setOrders, orders, mapOrder);
+
+    const deleteProduction = (id) => deleteItem('production', id, setProduction, production);
+    const updateProduction = (id, data) => updateItem('production', id, data, setProduction, production);
+
+    const deleteExpense = (id) => deleteItem('expenses', id, setExpenses, expenses);
+    const updateExpense = (id, data) => updateItem('expenses', id, data, setExpenses, expenses);
+
+    const deleteStock = async (type, name) => {
+        try {
+            const res = await fetch(`${API_URL}/stocks/${type}/${name}`, { method: 'DELETE' });
+            if (res.ok) {
+                // Refetch stocks to simplify state update for composite key
+                const stocksRes = await fetch(`${API_URL}/stocks`);
+                setStocks(await stocksRes.json());
+            }
+        } catch (err) {
+            console.error("Error deleting stock:", err);
+        }
+    };
+
+    const updateStock = async (type, name, data) => {
+        try {
+            await fetch(`${API_URL}/stocks/${type}/${name}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const stocksRes = await fetch(`${API_URL}/stocks`);
+            setStocks(await stocksRes.json());
+        } catch (err) {
+            console.error("Error updating stock:", err);
+        }
+    };
+
+    const deleteEmployee = (id) => deleteItem('employees', id, setEmployees, employees);
+    const updateEmployee = (id, data) => updateItem('employees', id, data, setEmployees, employees, mapEmployee);
+
+    const deleteCustomer = (id) => deleteItem('customers', id, setCustomers, customers);
+    const updateCustomer = (id, data) => updateItem('customers', id, data, setCustomers, customers);
+
+    const deleteAttendance = (id) => deleteItem('attendance', id, setAttendance, attendance);
+
+    const deleteRawMaterialPurchase = (id) => deleteItem('raw-material-purchases', id, setRawMaterialPurchases, rawMaterialPurchases);
+    const updateRawMaterialPurchase = (id, data) => updateItem('raw-material-purchases', id, data, setRawMaterialPurchases, rawMaterialPurchases, mapPurchase);
+
+
     return (
         <DataContext.Provider value={{
-            sales, addSale, markSaleAsPaid, updateSaleAmountReceived,
-            production, addProduction,
-            expenses, addExpense,
-            stocks, addStock,
-            customers, addCustomer,
-            employees, addEmployee,
-            attendance, markAttendance,
-            orders, addOrder, updateOrderStatus, convertOrderToSale, markOrderAsPaid, updateOrderAmountReceived,
-            rawMaterialPurchases, addRawMaterialPurchase,
+            sales, addSale, markSaleAsPaid, updateSaleAmountReceived, deleteSale, updateSale,
+            production, addProduction, deleteProduction, updateProduction,
+            expenses, addExpense, deleteExpense, updateExpense,
+            stocks, addStock, deleteStock, updateStock,
+            customers, addCustomer, deleteCustomer, updateCustomer,
+            employees, addEmployee, deleteEmployee, updateEmployee,
+            attendance, markAttendance, deleteAttendance,
+            orders, addOrder, updateOrderStatus, convertOrderToSale, markOrderAsPaid, updateOrderAmountReceived, deleteOrder, updateOrder,
+            rawMaterialPurchases, addRawMaterialPurchase, deleteRawMaterialPurchase, updateRawMaterialPurchase,
             items,
             loading
         }}>

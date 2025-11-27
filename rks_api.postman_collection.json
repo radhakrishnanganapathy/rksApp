@@ -1,0 +1,443 @@
+{
+    "info": {
+        "_postman_id": "b5c9e5d2-8f1a-4c2b-9f6e-1a2b3c4d5e6f",
+        "name": "RKS Business API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Sales",
+            "item": [
+                {
+                    "name": "Get All Sales",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Sale",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id\": {{timestamp}},\n  \"date\": \"2025-11-26\",\n  \"customerId\": 1,\n  \"items\": [\n    { \"name\": \"Sample product\", \"qty\": 2, \"price\": 150 }\n  ],\n  \"discount\": 0,\n  \"total\": 300,\n  \"paymentStatus\": \"paid\",\n  \"amountReceived\": 300\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/sales",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Orders",
+            "item": [
+                {
+                    "name": "Get All Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/orders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "orders"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Order",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id\": {{timestamp}}+1,\n  \"bookingDate\": \"2025-11-26\",\n  \"dueDate\": \"2025-12-03\",\n  \"customerId\": 1,\n  \"status\": \"waiting\",\n  \"items\": [ { \"name\": \"Sample product\", \"qty\": 5, \"price\": 120 } ],\n  \"discount\": 0,\n  \"total\": 600,\n  \"paymentStatus\": \"paid\",\n  \"amountReceived\": 0\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/orders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "orders"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Production",
+            "item": [
+                {
+                    "name": "Get All Production",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/production",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "production"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Production",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id\": {{timestamp}}+2,\n  \"date\": \"2025-11-26\",\n  \"item\": \"Finished Widget\",\n  \"qty\": 50\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/production",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "production"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Expenses",
+            "item": [
+                {
+                    "name": "Get All Expenses",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/expenses",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "expenses"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Expense",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id\": {{timestamp}}+3,\n  \"date\": \"2025-11-26\",\n  \"description\": \"Electricity bill\",\n  \"amount\": 2500,\n  \"category\": \"Utilities\",\n  \"qty\": \"1\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/expenses",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "expenses"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Stocks",
+            "item": [
+                {
+                    "name": "Get Stocks",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/stocks",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "stocks"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Upsert Stock",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"product\",\n  \"name\": \"Sample product\",\n  \"qty\": 100,\n  \"unit\": \"kg\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/stocks",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "stocks"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Customers",
+            "item": [
+                {
+                    "name": "Get All Customers",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/customers",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "customers"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Customer",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id\": {{timestamp}}+4,\n  \"name\": \"Acme Corp\",\n  \"mobile\": \"9876543210\",\n  \"place\": \"Bangalore\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/customers",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "customers"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Employees",
+            "item": [
+                {
+                    "name": "Get All Employees",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/employees",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "employees"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Employee",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id\": {{timestamp}}+5,\n  \"name\": \"Ramesh Kumar\",\n  \"salaryType\": \"daily\",\n  \"dailySalary\": 500,\n  \"active\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/employees",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "employees"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Attendance",
+            "item": [
+                {
+                    "name": "Get Attendance",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/attendance",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "attendance"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Mark Attendance",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id\": {{timestamp}}+6,\n  \"employeeId\": {{timestamp}}+5,\n  \"date\": \"2025-11-26\",\n  \"status\": \"present\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/attendance",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "attendance"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Raw Material Purchases",
+            "item": [
+                {
+                    "name": "Get All Purchases",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/raw-material-purchases",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "raw-material-purchases"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Purchase",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id\": {{timestamp}}+7,\n  \"date\": \"2025-11-26\",\n  \"materialName\": \"Steel rods\",\n  \"qty\": 200,\n  \"cost\": 15000\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/raw-material-purchases",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "raw-material-purchases"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "event": [],
+    "variable": []
+}

@@ -174,12 +174,32 @@ app.post('/api/sales', async (req, res) => {
 
 app.put('/api/sales/:id', async (req, res) => {
     const { id } = req.params;
-    const { paymentStatus, amountReceived } = req.body;
+    const { date, customerId, discount, total, paymentStatus, amountReceived, items } = req.body;
     try {
         let query = 'UPDATE sales SET ';
         const params = [];
         let paramCount = 1;
 
+        if (date !== undefined) {
+            query += `date = $${paramCount}, `;
+            params.push(date);
+            paramCount++;
+        }
+        if (customerId !== undefined) {
+            query += `customer_id = $${paramCount}, `;
+            params.push(customerId);
+            paramCount++;
+        }
+        if (discount !== undefined) {
+            query += `discount = $${paramCount}, `;
+            params.push(discount);
+            paramCount++;
+        }
+        if (total !== undefined) {
+            query += `total = $${paramCount}, `;
+            params.push(total);
+            paramCount++;
+        }
         if (paymentStatus !== undefined) {
             query += `payment_status = $${paramCount}, `;
             params.push(paymentStatus);
@@ -190,6 +210,11 @@ app.put('/api/sales/:id', async (req, res) => {
             params.push(amountReceived);
             paramCount++;
         }
+        if (items !== undefined) {
+            query += `items = $${paramCount}, `;
+            params.push(JSON.stringify(items));
+            paramCount++;
+        }
 
         query = query.slice(0, -2); // Remove trailing comma
         query += ` WHERE id = $${paramCount} RETURNING *`;
@@ -197,6 +222,19 @@ app.put('/api/sales/:id', async (req, res) => {
 
         const result = await db.query(query, params);
         res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/sales/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM sales WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Sale not found' });
+        }
+        res.json({ message: 'Sale deleted successfully', sale: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -227,15 +265,40 @@ app.post('/api/orders', async (req, res) => {
 
 app.put('/api/orders/:id', async (req, res) => {
     const { id } = req.params;
-    const { status, paymentStatus, amountReceived } = req.body;
+    const { bookingDate, dueDate, customerId, status, discount, total, paymentStatus, amountReceived, items } = req.body;
     try {
         let query = 'UPDATE orders SET ';
         const params = [];
         let paramCount = 1;
 
+        if (bookingDate !== undefined) {
+            query += `booking_date = $${paramCount}, `;
+            params.push(bookingDate);
+            paramCount++;
+        }
+        if (dueDate !== undefined) {
+            query += `due_date = $${paramCount}, `;
+            params.push(dueDate);
+            paramCount++;
+        }
+        if (customerId !== undefined) {
+            query += `customer_id = $${paramCount}, `;
+            params.push(customerId);
+            paramCount++;
+        }
         if (status !== undefined) {
             query += `status = $${paramCount}, `;
             params.push(status);
+            paramCount++;
+        }
+        if (discount !== undefined) {
+            query += `discount = $${paramCount}, `;
+            params.push(discount);
+            paramCount++;
+        }
+        if (total !== undefined) {
+            query += `total = $${paramCount}, `;
+            params.push(total);
             paramCount++;
         }
         if (paymentStatus !== undefined) {
@@ -248,6 +311,11 @@ app.put('/api/orders/:id', async (req, res) => {
             params.push(amountReceived);
             paramCount++;
         }
+        if (items !== undefined) {
+            query += `items = $${paramCount}, `;
+            params.push(JSON.stringify(items));
+            paramCount++;
+        }
 
         query = query.slice(0, -2);
         query += ` WHERE id = $${paramCount} RETURNING *`;
@@ -255,6 +323,19 @@ app.put('/api/orders/:id', async (req, res) => {
 
         const result = await db.query(query, params);
         res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/orders/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM orders WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        res.json({ message: 'Order deleted successfully', order: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -283,6 +364,64 @@ app.post('/api/expenses', async (req, res) => {
     }
 });
 
+app.put('/api/expenses/:id', async (req, res) => {
+    const { id } = req.params;
+    const { date, description, amount, category, qty } = req.body;
+    try {
+        let query = 'UPDATE expenses SET ';
+        const params = [];
+        let paramCount = 1;
+
+        if (date !== undefined) {
+            query += `date = $${paramCount}, `;
+            params.push(date);
+            paramCount++;
+        }
+        if (description !== undefined) {
+            query += `description = $${paramCount}, `;
+            params.push(description);
+            paramCount++;
+        }
+        if (amount !== undefined) {
+            query += `amount = $${paramCount}, `;
+            params.push(amount);
+            paramCount++;
+        }
+        if (category !== undefined) {
+            query += `category = $${paramCount}, `;
+            params.push(category);
+            paramCount++;
+        }
+        if (qty !== undefined) {
+            query += `qty = $${paramCount}, `;
+            params.push(qty);
+            paramCount++;
+        }
+
+        query = query.slice(0, -2);
+        query += ` WHERE id = $${paramCount} RETURNING *`;
+        params.push(id);
+
+        const result = await db.query(query, params);
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/expenses/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM expenses WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Expense not found' });
+        }
+        res.json({ message: 'Expense deleted successfully', expense: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- Production ---
 app.get('/api/production', async (req, res) => {
     try {
@@ -301,6 +440,54 @@ app.post('/api/production', async (req, res) => {
             [id, date, item, qty]
         );
         res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/production/:id', async (req, res) => {
+    const { id } = req.params;
+    const { date, item, qty } = req.body;
+    try {
+        let query = 'UPDATE production SET ';
+        const params = [];
+        let paramCount = 1;
+
+        if (date !== undefined) {
+            query += `date = $${paramCount}, `;
+            params.push(date);
+            paramCount++;
+        }
+        if (item !== undefined) {
+            query += `item = $${paramCount}, `;
+            params.push(item);
+            paramCount++;
+        }
+        if (qty !== undefined) {
+            query += `qty = $${paramCount}, `;
+            params.push(qty);
+            paramCount++;
+        }
+
+        query = query.slice(0, -2);
+        query += ` WHERE id = $${paramCount} RETURNING *`;
+        params.push(id);
+
+        const result = await db.query(query, params);
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/production/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM production WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Production record not found' });
+        }
+        res.json({ message: 'Production record deleted successfully', production: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -337,6 +524,49 @@ app.post('/api/stocks', async (req, res) => {
     }
 });
 
+app.put('/api/stocks/:type/:name', async (req, res) => {
+    const { type, name } = req.params;
+    const { qty, unit } = req.body;
+    try {
+        let query = 'UPDATE stocks SET ';
+        const params = [];
+        let paramCount = 1;
+
+        if (qty !== undefined) {
+            query += `qty = $${paramCount}, `;
+            params.push(qty);
+            paramCount++;
+        }
+        if (unit !== undefined) {
+            query += `unit = $${paramCount}, `;
+            params.push(unit);
+            paramCount++;
+        }
+
+        query = query.slice(0, -2);
+        query += ` WHERE type = $${paramCount} AND name = $${paramCount + 1} RETURNING *`;
+        params.push(type, name);
+
+        const result = await db.query(query, params);
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/stocks/:type/:name', async (req, res) => {
+    const { type, name } = req.params;
+    try {
+        const result = await db.query('DELETE FROM stocks WHERE type = $1 AND name = $2 RETURNING *', [type, name]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Stock item not found' });
+        }
+        res.json({ message: 'Stock item deleted successfully', stock: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- Employees ---
 app.get('/api/employees', async (req, res) => {
     try {
@@ -355,6 +585,59 @@ app.post('/api/employees', async (req, res) => {
             [id, name, salaryType, dailySalary]
         );
         res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/employees/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, salaryType, dailySalary, active } = req.body;
+    try {
+        let query = 'UPDATE employees SET ';
+        const params = [];
+        let paramCount = 1;
+
+        if (name !== undefined) {
+            query += `name = $${paramCount}, `;
+            params.push(name);
+            paramCount++;
+        }
+        if (salaryType !== undefined) {
+            query += `salary_type = $${paramCount}, `;
+            params.push(salaryType);
+            paramCount++;
+        }
+        if (dailySalary !== undefined) {
+            query += `daily_salary = $${paramCount}, `;
+            params.push(dailySalary);
+            paramCount++;
+        }
+        if (active !== undefined) {
+            query += `active = $${paramCount}, `;
+            params.push(active);
+            paramCount++;
+        }
+
+        query = query.slice(0, -2);
+        query += ` WHERE id = $${paramCount} RETURNING *`;
+        params.push(id);
+
+        const result = await db.query(query, params);
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/employees/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM employees WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+        res.json({ message: 'Employee deleted successfully', employee: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -394,6 +677,19 @@ app.post('/api/attendance', async (req, res) => {
     }
 });
 
+app.delete('/api/attendance/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM attendance WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Attendance record not found' });
+        }
+        res.json({ message: 'Attendance record deleted successfully', attendance: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- Raw Material Purchases ---
 app.get('/api/raw-material-purchases', async (req, res) => {
     try {
@@ -412,6 +708,130 @@ app.post('/api/raw-material-purchases', async (req, res) => {
             [id, date, materialName, qty, cost]
         );
         res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/raw-material-purchases/:id', async (req, res) => {
+    const { id } = req.params;
+    const { date, materialName, qty, cost } = req.body;
+    try {
+        let query = 'UPDATE raw_material_purchases SET ';
+        const params = [];
+        let paramCount = 1;
+
+        if (date !== undefined) {
+            query += `date = $${paramCount}, `;
+            params.push(date);
+            paramCount++;
+        }
+        if (materialName !== undefined) {
+            query += `material_name = $${paramCount}, `;
+            params.push(materialName);
+            paramCount++;
+        }
+        if (qty !== undefined) {
+            query += `qty = $${paramCount}, `;
+            params.push(qty);
+            paramCount++;
+        }
+        if (cost !== undefined) {
+            query += `cost = $${paramCount}, `;
+            params.push(cost);
+            paramCount++;
+        }
+
+        query = query.slice(0, -2);
+        query += ` WHERE id = $${paramCount} RETURNING *`;
+        params.push(id);
+
+        const result = await db.query(query, params);
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/raw-material-purchases/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM raw_material_purchases WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Raw material purchase not found' });
+        }
+        res.json({ message: 'Raw material purchase deleted successfully', purchase: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Customers ---
+app.get('/api/customers', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM customers ORDER BY name');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/customers', async (req, res) => {
+    const { id, name, mobile, place } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO customers (id, name, mobile, place) VALUES ($1, $2, $3, $4) RETURNING *',
+            [id, name, mobile, place]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/customers/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, mobile, place } = req.body;
+    try {
+        let query = 'UPDATE customers SET ';
+        const params = [];
+        let paramCount = 1;
+
+        if (name !== undefined) {
+            query += `name = $${paramCount}, `;
+            params.push(name);
+            paramCount++;
+        }
+        if (mobile !== undefined) {
+            query += `mobile = $${paramCount}, `;
+            params.push(mobile);
+            paramCount++;
+        }
+        if (place !== undefined) {
+            query += `place = $${paramCount}, `;
+            params.push(place);
+            paramCount++;
+        }
+
+        query = query.slice(0, -2);
+        query += ` WHERE id = $${paramCount} RETURNING *`;
+        params.push(id);
+
+        const result = await db.query(query, params);
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/customers/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM customers WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Customer not found' });
+        }
+        res.json({ message: 'Customer deleted successfully', customer: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
