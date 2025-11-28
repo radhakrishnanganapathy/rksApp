@@ -155,7 +155,7 @@ const Orders = ({ onNavigateBack }) => {
                 const newQty = Number(stockItem.qty) - Number(item.qty);
                 // Only update if we have a valid stock item
                 if (newQty >= 0) {
-                    await updateStock('products', item.name, { ...stockItem, qty: newQty });
+                    await updateStock('product', item.name, { ...stockItem, qty: newQty });
                 }
             }
         }
