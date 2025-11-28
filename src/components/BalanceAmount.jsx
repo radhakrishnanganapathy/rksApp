@@ -1,9 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { DollarSign, Save, CheckCircle, ArrowLeft } from 'lucide-react';
+import { DollarSign, Save, CheckCircle, ArrowLeft, Check } from 'lucide-react';
 
 const BalanceAmount = ({ onNavigateBack }) => {
-    const { sales, orders, customers, updateSaleAmountReceived, updateOrderAmountReceived } = useData();
+    const {
+        sales,
+        orders,
+        customers,
+        updateSaleAmountReceived,
+        updateOrderAmountReceived,
+        markSaleAsPaid,
+        markOrderAsPaid
+    } = useData();
 
     const [amountInputs, setAmountInputs] = useState({});
 
@@ -31,7 +39,7 @@ const BalanceAmount = ({ onNavigateBack }) => {
                     items: []
                 };
             }
-            const balance = sale.total - (sale.amountReceived || 0);
+            const balance = Number(sale.total) - Number(sale.amountReceived || 0);
             grouped[sale.customerId].totalBalance += balance;
             grouped[sale.customerId].items.push({ ...sale, type: 'sale', balance });
         });
@@ -45,7 +53,7 @@ const BalanceAmount = ({ onNavigateBack }) => {
                     items: []
                 };
             }
-            const balance = order.total - (order.amountReceived || 0);
+            const balance = Number(order.total) - Number(order.amountReceived || 0);
             grouped[order.customerId].totalBalance += balance;
             grouped[order.customerId].items.push({ ...order, type: 'order', balance });
         });
@@ -84,7 +92,7 @@ const BalanceAmount = ({ onNavigateBack }) => {
 
             const itemBalance = item.balance;
             const amountToApply = Math.min(remainingAmount, itemBalance);
-            const newTotalReceived = (item.amountReceived || 0) + amountToApply;
+            const newTotalReceived = Number(item.amountReceived || 0) + amountToApply;
 
             if (item.type === 'sale') {
                 updateSaleAmountReceived(item.id, newTotalReceived);
@@ -101,6 +109,33 @@ const BalanceAmount = ({ onNavigateBack }) => {
         setAmountInputs(newInputs);
 
         alert('Amount saved and distributed!');
+    };
+
+    const handleMarkAsPaid = async (customerData) => {
+        if (!window.confirm(`Mark all bills for ${getCustomerName(customerData.customerId)} as fully paid?`)) {
+            return;
+        }
+
+        try {
+            // Mark all items for this customer as fully paid
+            for (const item of customerData.items) {
+                if (item.type === 'sale') {
+                    await markSaleAsPaid(item.id);
+                } else {
+                    await markOrderAsPaid(item.id);
+                }
+            }
+
+            // Clear input
+            const newInputs = { ...amountInputs };
+            delete newInputs[customerData.customerId];
+            setAmountInputs(newInputs);
+
+            alert('All bills marked as paid!');
+        } catch (error) {
+            console.error('Error marking as paid:', error);
+            alert('Error marking bills as paid. Please try again.');
+        }
     };
 
     return (
@@ -165,14 +200,23 @@ const BalanceAmount = ({ onNavigateBack }) => {
                                         />
                                     </div>
 
-                                    {/* Save Button */}
-                                    <button
-                                        onClick={() => handleSave(customerData)}
-                                        className="w-full bg-blue-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 font-semibold hover:bg-blue-700 transition-colors"
-                                    >
-                                        <Save size={18} />
-                                        Save Amount
-                                    </button>
+                                    {/* Action Buttons */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            onClick={() => handleSave(customerData)}
+                                            className="bg-blue-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 font-semibold hover:bg-blue-700 transition-colors"
+                                        >
+                                            <Save size={18} />
+                                            Save Amount
+                                        </button>
+                                        <button
+                                            onClick={() => handleMarkAsPaid(customerData)}
+                                            className="bg-green-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 font-semibold hover:bg-green-700 transition-colors"
+                                        >
+                                            <Check size={18} />
+                                            Mark as Paid
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         );

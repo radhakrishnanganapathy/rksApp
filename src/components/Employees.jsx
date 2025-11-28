@@ -78,8 +78,12 @@ const Employees = ({ onNavigateBack }) => {
 
     // Get daily attendance list
     const dailyAttendanceList = useMemo(() => {
-        const dateAttendance = attendance.filter(a => a.date === selectedDate);
-        return employees.filter(e => e.active).map(emp => {
+        const dateAttendance = attendance.filter(a => {
+            // Extract just the date part from the ISO timestamp (YYYY-MM-DD)
+            const attendanceDate = a.date ? a.date.split('T')[0] : null;
+            return attendanceDate === selectedDate;
+        });
+        return employees.filter(e => e.active !== false).map(emp => {
             const record = dateAttendance.find(a => String(a.employeeId) === String(emp.id));
             return {
                 ...emp,

@@ -34,7 +34,8 @@ const initializeTables = async () => {
                 total NUMERIC NOT NULL,
                 payment_status TEXT DEFAULT 'paid',
                 amount_received NUMERIC DEFAULT 0,
-                items JSONB NOT NULL
+                items JSONB NOT NULL,
+                buy_type TEXT DEFAULT 'regular'
             );
         `);
 
@@ -186,11 +187,11 @@ app.get('/api/sales', async (req, res) => {
 });
 
 app.post('/api/sales', async (req, res) => {
-    const { id, date, customerId, discount, total, paymentStatus, amountReceived, items } = req.body;
+    const { id, date, customerId, discount, total, paymentStatus, amountReceived, items, buyType } = req.body;
     try {
         const result = await db.query(
-            'INSERT INTO sales (id, date, customer_id, discount, total, payment_status, amount_received, items) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-            [id, date, customerId, discount, total, paymentStatus, amountReceived, JSON.stringify(items)]
+            'INSERT INTO sales (id, date, customer_id, discount, total, payment_status, amount_received, items, buy_type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+            [id, date, customerId, discount, total, paymentStatus, amountReceived, JSON.stringify(items), buyType || 'regular']
         );
         res.json(result.rows[0]);
     } catch (err) {

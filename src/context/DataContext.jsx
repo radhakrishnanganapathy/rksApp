@@ -69,6 +69,11 @@ export const DataProvider = ({ children }) => {
         cost: Number(u.cost || 0)
     });
 
+    const mapPurchase = (p) => ({
+        ...p,
+        materialName: p.material_name
+    });
+
     // Fetch Initial Data
     useEffect(() => {
         const fetchData = async () => {
@@ -391,9 +396,9 @@ export const DataProvider = ({ children }) => {
         }
     };
 
-    const convertOrderToSale = async (orderId) => {
+    const convertOrderToSale = async (orderId, paymentStatus = null) => {
         const order = orders.find(o => o.id === orderId);
-        if (!order || order.status !== 'delivered') return;
+        if (!order) return;
 
         const sale = {
             date: order.dueDate,
@@ -401,11 +406,34 @@ export const DataProvider = ({ children }) => {
             items: order.items,
             discount: order.discount,
             total: order.total,
-            paymentStatus: order.paymentStatus,
-            amountReceived: order.amountReceived
+            paymentStatus: paymentStatus || order.paymentStatus,
+            amountReceived: order.amountReceived || 0,
+            buyType: 'order'
         };
 
         await addSale(sale);
+    };
+
+    const clearOrder = async (orderId, paymentStatus) => {
+        const order = orders.find(o => o.id === orderId);
+        if (!order) return;
+
+        // Convert to sale with specified payment status
+        const sale = {
+            date: order.dueDate,
+            customerId: order.customerId,
+            items: order.items,
+            discount: order.discount,
+            total: order.total,
+            paymentStatus: paymentStatus,
+            amountReceived: paymentStatus === 'paid' ? order.total : 0,
+            buyType: 'order'
+        };
+
+        await addSale(sale);
+
+        // Delete the order
+        await deleteOrder(orderId);
     };
 
     const addRawMaterialPurchase = async (purchase) => {
@@ -577,7 +605,7 @@ export const DataProvider = ({ children }) => {
             customers, addCustomer, deleteCustomer, updateCustomer,
             employees, addEmployee, deleteEmployee, updateEmployee,
             attendance, markAttendance, deleteAttendance,
-            orders, addOrder, updateOrderStatus, convertOrderToSale, markOrderAsPaid, updateOrderAmountReceived, deleteOrder, updateOrder,
+            orders, addOrder, updateOrderStatus, convertOrderToSale, clearOrder, markOrderAsPaid, updateOrderAmountReceived, deleteOrder, updateOrder,
             rawMaterialPurchases, addRawMaterialPurchase, deleteRawMaterialPurchase, updateRawMaterialPurchase,
             rawMaterialUsage, addRawMaterialUsage, deleteRawMaterialUsage, updateRawMaterialUsage,
             items,

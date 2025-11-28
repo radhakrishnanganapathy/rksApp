@@ -17,13 +17,16 @@ const Dashboard = () => {
     const [selectedYear, setSelectedYear] = useState(currentYear);
     const [chartType, setChartType] = useState('bar');
 
-    // Filter Data
-    const filteredSales = useMemo(() => filterByMonthYear(sales, selectedMonth, selectedYear), [sales, selectedMonth, selectedYear]);
+    // Filter Data - Only show regular sales (not order-converted)
+    const filteredSales = useMemo(() => {
+        const regularSales = sales.filter(sale => !sale.buyType || sale.buyType === 'regular');
+        return filterByMonthYear(regularSales, selectedMonth, selectedYear);
+    }, [sales, selectedMonth, selectedYear]);
     const filteredProduction = useMemo(() => filterByMonthYear(production, selectedMonth, selectedYear), [production, selectedMonth, selectedYear]);
     const filteredExpenses = useMemo(() => filterByMonthYear(expenses, selectedMonth, selectedYear), [expenses, selectedMonth, selectedYear]);
 
     // Calculate Totals
-    const totalSales = filteredSales.reduce((sum, item) => sum + item.total, 0);
+    const totalSales = filteredSales.reduce((sum, item) => sum + Number(item.total), 0);
     const totalExpenses = filteredExpenses.reduce((sum, item) => sum + Number(item.amount), 0);
     const totalProductionQty = filteredProduction.reduce((sum, item) => sum + Number(item.qty), 0);
 
@@ -35,11 +38,11 @@ const Dashboard = () => {
     // Calculate total stocks in kg
     const totalStocksKg = stocks.products.reduce((sum, product) => sum + Number(product.qty), 0);
 
-    // Calculate total unpaid amount
+    // Calculate total unpaid amount (only regular sales, not order-converted)
     const totalUnpaid = useMemo(() => {
-        const unpaidSales = sales.filter(sale => sale.paymentStatus === 'not_paid');
+        const unpaidSales = sales.filter(sale => sale.paymentStatus === 'not_paid' && (!sale.buyType || sale.buyType === 'regular'));
         const unpaidOrders = orders.filter(order => order.paymentStatus === 'not_paid');
-        return [...unpaidSales, ...unpaidOrders].reduce((sum, item) => sum + item.total, 0);
+        return [...unpaidSales, ...unpaidOrders].reduce((sum, item) => sum + Number(item.total), 0);
     }, [sales, orders]);
 
     // Profit Calculation (Simplified: Sales - Expenses)
@@ -265,12 +268,12 @@ const Dashboard = () => {
                     <p className="text-xl font-bold text-gray-800">{totalProductionQty.toFixed(2)} <span className="text-xs font-normal text-gray-500">kg</span></p>
                 </div>
 
-                <div className="bg-red-50 p-4 rounded-xl shadow-sm border border-red-100">
-                    <div className="flex items-center gap-2 text-red-600 mb-1">
-                        <TrendingDown size={16} />
-                        <span className="text-xs font-semibold uppercase">Expenses</span>
+                <div className="bg-pink-50 p-4 rounded-xl shadow-sm border border-pink-100">
+                    <div className="flex items-center gap-2 text-pink-600 mb-1">
+                        <DollarSign size={16} />
+                        <span className="text-xs font-semibold uppercase">Total Salary Given</span>
                     </div>
-                    <p className="text-xl font-bold text-gray-800">{formatCurrency(totalExpenses)}</p>
+                    <p className="text-xl font-bold text-gray-800">{formatCurrency(totalSalary)}</p>
                 </div>
 
                 <div className="bg-cyan-50 p-4 rounded-xl shadow-sm border border-cyan-100">

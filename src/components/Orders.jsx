@@ -4,11 +4,14 @@ import { formatCurrency } from '../utils';
 import { Plus, Trash2, Save, ClipboardList, Package, Calendar, CheckCircle, XCircle, Clock, Edit, ArrowLeft } from 'lucide-react';
 
 const Orders = ({ onNavigateBack }) => {
-    const { customers, items, stocks, orders, addOrder, updateOrder, updateOrderStatus, convertOrderToSale, deleteOrder } = useData();
+    const { customers, items, stocks, orders, addOrder, updateOrder, updateOrderStatus, convertOrderToSale, clearOrder, deleteOrder } = useData();
 
     const [activeTab, setActiveTab] = useState('new'); // 'new' or 'list'
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [editingOrderId, setEditingOrderId] = useState(null);
+    const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
+    const [deliveryOrderId, setDeliveryOrderId] = useState(null);
+    const [deliveryPaymentStatus, setDeliveryPaymentStatus] = useState('paid');
 
     // Form state
     const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -120,9 +123,34 @@ const Orders = ({ onNavigateBack }) => {
     };
 
     const handleMarkDelivered = (orderId) => {
-        updateOrderStatus(orderId, 'delivered');
-        convertOrderToSale(orderId);
+        setDeliveryOrderId(orderId);
+        const order = orders.find(o => o.id === orderId);
+        setDeliveryPaymentStatus(order?.paymentStatus || 'paid');
+        setShowDeliveryDialog(true);
+    };
+
+    const confirmDelivery = async () => {
+        if (!deliveryOrderId) return;
+
+        await updateOrderStatus(deliveryOrderId, 'delivered');
+        await convertOrderToSale(deliveryOrderId, deliveryPaymentStatus);
+
+        setShowDeliveryDialog(false);
+        setDeliveryOrderId(null);
         alert('Order marked as delivered and added to sales!');
+    };
+
+    const handleClearOrder = async (orderId) => {
+        if (!window.confirm('Clear this order? It will be moved to sales and removed from the order list.')) {
+            return;
+        }
+
+        const order = orders.find(o => o.id === orderId);
+        if (!order) return;
+
+        // Use the order's current payment status
+        await clearOrder(orderId, order.paymentStatus || 'paid');
+        alert('Order cleared and moved to sales!');
     };
 
     const handleCancelOrder = (orderId) => {
@@ -468,12 +496,84 @@ const Orders = ({ onNavigateBack }) => {
                                                 </button>
                                             </>
                                         )}
+                                        {order.status === 'delivered' && (
+                                            <button
+                                                onClick={() => handleClearOrder(order.id)}
+                                                className="bg-purple-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
+                                                title="Clear from list and move to sales"
+                                            >
+                                                <Package size={14} />
+                                                Clear
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </>
+            )}
+
+            {/* Delivery Payment Dialog */}
+            {showDeliveryDialog && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+                        <h3 className="text-lg font-bold mb-4 text-gray-800">Payment Status</h3>
+                        <p className="text-gray-600 mb-4">
+                            Select the payment status for this order:
+                        </p>
+
+                        <div className="space-y-3 mb-6">
+                            <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input
+                                    type="radio"
+                                    name="deliveryPayment"
+                                    value="paid"
+                                    checked={deliveryPaymentStatus === 'paid'}
+                                    onChange={(e) => setDeliveryPaymentStatus(e.target.value)}
+                                    className="w-4 h-4"
+                                />
+                                <div>
+                                    <span className="font-medium text-gray-800">Paid</span>
+                                    <p className="text-xs text-gray-500">Payment has been received</p>
+                                </div>
+                            </label>
+
+                            <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input
+                                    type="radio"
+                                    name="deliveryPayment"
+                                    value="not_paid"
+                                    checked={deliveryPaymentStatus === 'not_paid'}
+                                    onChange={(e) => setDeliveryPaymentStatus(e.target.value)}
+                                    className="w-4 h-4"
+                                />
+                                <div>
+                                    <span className="font-medium text-gray-800">Not Paid</span>
+                                    <p className="text-xs text-gray-500">Payment pending</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => {
+                                    setShowDeliveryDialog(false);
+                                    setDeliveryOrderId(null);
+                                }}
+                                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelivery}
+                                className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                            >
+                                Confirm
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
