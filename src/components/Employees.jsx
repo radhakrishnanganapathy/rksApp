@@ -7,28 +7,49 @@ const Employees = ({ onNavigateBack }) => {
     const { employees, attendance, addEmployee, markAttendance } = useData();
     const [showAddModal, setShowAddModal] = useState(false);
     const [name, setName] = useState('');
-    const [salaryPerDay, setSalaryPerDay] = useState('');
+    const [dailySalary, setDailySalary] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [viewMode, setViewMode] = useState('attendance'); // 'attendance' or 'summary'
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const [pendingEmployeeId, setPendingEmployeeId] = useState(null);
 
     const handleAddEmployee = () => {
-        if (!name || !salaryPerDay) return;
-        addEmployee({ name, salaryPerDay: Number(salaryPerDay) });
+        if (!name || !dailySalary) return;
+        addEmployee({ name, dailySalary: Number(dailySalary), salaryType: 'daily' });
         setName('');
-        setSalaryPerDay('');
+        setDailySalary('');
         setShowAddModal(false);
     };
 
     const getAttendanceForDate = (employeeId, date) => {
-        const record = attendance.find(a => a.employeeId === employeeId && a.date === date);
+        const record = attendance.find(a => String(a.employeeId) === String(employeeId) && a.date === date);
         return record?.status || null;
     };
 
     const handleAttendanceToggle = (employeeId, currentStatus) => {
-        const newStatus = currentStatus === 'present' ? 'absent' : 'present';
-        markAttendance(employeeId, selectedDate, newStatus);
+        // If no status (Mark button) or Absent, mark as Present immediately
+        if (!currentStatus || currentStatus === 'absent') {
+            markAttendance(employeeId, selectedDate, 'present');
+        } else if (currentStatus === 'present') {
+            // If Present, show confirmation dialog before marking absent
+            setPendingEmployeeId(employeeId);
+            setShowConfirmDialog(true);
+        }
+    };
+
+    const confirmMarkAbsent = () => {
+        if (pendingEmployeeId) {
+            markAttendance(pendingEmployeeId, selectedDate, 'absent');
+        }
+        setShowConfirmDialog(false);
+        setPendingEmployeeId(null);
+    };
+
+    const cancelMarkAbsent = () => {
+        setShowConfirmDialog(false);
+        setPendingEmployeeId(null);
     };
 
     // Calculate summary statistics
@@ -39,9 +60,9 @@ const Employees = ({ onNavigateBack }) => {
         });
 
         const summary = employees.filter(e => e.active).map(emp => {
-            const empAttendance = filteredAttendance.filter(a => a.employeeId === emp.id);
+            const empAttendance = filteredAttendance.filter(a => String(a.employeeId) === String(emp.id));
             const presentDays = empAttendance.filter(a => a.status === 'present').length;
-            const totalSalary = presentDays * emp.salaryPerDay;
+            const totalSalary = presentDays * emp.dailySalary;
 
             return {
                 ...emp,
@@ -59,7 +80,7 @@ const Employees = ({ onNavigateBack }) => {
     const dailyAttendanceList = useMemo(() => {
         const dateAttendance = attendance.filter(a => a.date === selectedDate);
         return employees.filter(e => e.active).map(emp => {
-            const record = dateAttendance.find(a => a.employeeId === emp.id);
+            const record = dateAttendance.find(a => String(a.employeeId) === String(emp.id));
             return {
                 ...emp,
                 status: record?.status || null
@@ -127,7 +148,7 @@ const Employees = ({ onNavigateBack }) => {
                                     <div className="flex justify-between items-center">
                                         <div>
                                             <p className="font-semibold text-gray-800">{emp.name}</p>
-                                            <p className="text-sm text-gray-500">{formatCurrency(emp.salaryPerDay)}/day</p>
+                                            <p className="text-sm text-gray-500">{formatCurrency(emp.dailySalary)}/day</p>
                                         </div>
                                         <button
                                             onClick={() => handleAttendanceToggle(emp.id, emp.status)}
@@ -204,7 +225,7 @@ const Employees = ({ onNavigateBack }) => {
                                     <div className="flex justify-between items-start mb-2">
                                         <div>
                                             <p className="font-semibold text-gray-800">{emp.name}</p>
-                                            <p className="text-sm text-gray-500">{formatCurrency(emp.salaryPerDay)}/day</p>
+                                            <p className="text-sm text-gray-500">{formatCurrency(emp.dailySalary)}/day</p>
                                         </div>
                                         <div className="text-right">
                                             <p className="font-bold text-primary-600">{formatCurrency(emp.totalSalary)}</p>
@@ -237,8 +258,8 @@ const Employees = ({ onNavigateBack }) => {
                                 <label className="block text-sm font-medium mb-1">Salary per Day</label>
                                 <input
                                     type="number"
-                                    value={salaryPerDay}
-                                    onChange={(e) => setSalaryPerDay(e.target.value)}
+                                    value={dailySalary}
+                                    onChange={(e) => setDailySalary(e.target.value)}
                                     className="w-full border rounded p-2"
                                 />
                             </div>
@@ -256,6 +277,32 @@ const Employees = ({ onNavigateBack }) => {
                                     <Save size={16} /> Add
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirm Mark Absent Dialog */}
+            {showConfirmDialog && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+                        <h3 className="text-lg font-bold mb-4 text-gray-800">Confirm Absence</h3>
+                        <p className="text-gray-600 mb-6">
+                            Are you sure you want to mark this employee as absent?
+                        </p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={cancelMarkAbsent}
+                                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmMarkAbsent}
+                                className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
+                            >
+                                <X size={16} /> Confirm Absent
+                            </button>
                         </div>
                     </div>
                 </div>

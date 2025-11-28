@@ -41,7 +41,7 @@ export const DataProvider = ({ children }) => {
     const mapEmployee = (e) => ({
         ...e,
         salaryType: e.salary_type,
-        dailySalary: e.daily_salary
+        dailySalary: e.daily_salary ? Number(e.daily_salary) : 0
     });
 
     const mapAttendance = (a) => ({
