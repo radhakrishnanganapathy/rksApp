@@ -10,7 +10,7 @@ import { Filter, TrendingUp, TrendingDown, DollarSign, Package } from 'lucide-re
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const Dashboard = () => {
-    const { sales, production, expenses, stocks, orders } = useData();
+    const { sales, production, expenses, stocks, orders, attendance, employees, rawMaterialUsage } = useData();
     const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
 
     const [selectedMonth, setSelectedMonth] = useState(currentMonth);
@@ -24,7 +24,7 @@ const Dashboard = () => {
 
     // Calculate Totals
     const totalSales = filteredSales.reduce((sum, item) => sum + item.total, 0);
-    const totalExpenses = filteredExpenses.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = filteredExpenses.reduce((sum, item) => sum + Number(item.amount), 0);
     const totalProductionQty = filteredProduction.reduce((sum, item) => sum + Number(item.qty), 0);
 
     // Calculate total sales in kg
@@ -44,6 +44,36 @@ const Dashboard = () => {
 
     // Profit Calculation (Simplified: Sales - Expenses)
     const profit = totalSales - totalExpenses;
+
+    // --- New Metrics Calculation ---
+
+    // 1. Calculate Total Salary based on Attendance
+    const filteredAttendance = useMemo(() => filterByMonthYear(attendance, selectedMonth, selectedYear), [attendance, selectedMonth, selectedYear]);
+
+    const totalSalary = useMemo(() => {
+        return filteredAttendance.reduce((sum, record) => {
+            if (record.status === 'present') {
+                const employee = employees.find(e => e.id === record.employeeId);
+                return sum + (employee ? Number(employee.dailySalary) : 0);
+            }
+            return sum;
+        }, 0);
+    }, [filteredAttendance, employees]);
+
+    // 2. Calculate Total Usage Cost
+    const filteredUsageCost = useMemo(() => filterByMonthYear(rawMaterialUsage, selectedMonth, selectedYear), [rawMaterialUsage, selectedMonth, selectedYear]);
+    const totalUsageCost = filteredUsageCost.reduce((sum, u) => sum + Number(u.cost || 0), 0);
+
+    // 3. Calculate Operational Expenses (Expenses excluding Raw Material purchases)
+    const operationalExpenses = filteredExpenses
+        .filter(e => e.category !== 'Raw Material')
+        .reduce((sum, e) => sum + Number(e.amount), 0);
+
+    // Metric 1: Overall Expense = Total Expenses (Purchases + Ops) + Salary
+    const overallExpense = totalExpenses + totalSalary;
+
+    // Metric 2: Usage Based Expense = Raw Material Usage Cost + Operational Expenses + Salary
+    const usageBasedExpense = totalUsageCost + operationalExpenses + totalSalary;
 
     // Chart Data Preparation
     // 1. Total quantity (kg) sold per item – used for Pie & Bar charts
@@ -265,6 +295,25 @@ const Dashboard = () => {
                         <span className="text-xs font-semibold uppercase">Not Received</span>
                     </div>
                     <p className="text-xl font-bold text-gray-800">{formatCurrency(totalUnpaid)}</p>
+                </div>
+
+                {/* New Expense Metrics */}
+                <div className="bg-indigo-50 p-4 rounded-xl shadow-sm border border-indigo-100 col-span-2 sm:col-span-1">
+                    <div className="flex items-center gap-2 text-indigo-600 mb-1">
+                        <TrendingDown size={16} />
+                        <span className="text-xs font-semibold uppercase">Overall Expense (Inc. Salary)</span>
+                    </div>
+                    <p className="text-xl font-bold text-gray-800">{formatCurrency(overallExpense)}</p>
+                    <p className="text-[10px] text-gray-500">Total Purchase + Salary</p>
+                </div>
+
+                <div className="bg-orange-50 p-4 rounded-xl shadow-sm border border-orange-100 col-span-2 sm:col-span-1">
+                    <div className="flex items-center gap-2 text-orange-600 mb-1">
+                        <TrendingDown size={16} />
+                        <span className="text-xs font-semibold uppercase">Usage Based Expense</span>
+                    </div>
+                    <p className="text-xl font-bold text-gray-800">{formatCurrency(usageBasedExpense)}</p>
+                    <p className="text-[10px] text-gray-500">Usage Cost + Ops + Salary</p>
                 </div>
             </div>
 

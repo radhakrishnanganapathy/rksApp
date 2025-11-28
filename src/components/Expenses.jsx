@@ -6,7 +6,7 @@ import { formatCurrency, filterByMonthYear } from '../utils';
 const Expenses = ({ onNavigateBack }) => {
     const {
         expenses, addExpense, updateExpense, deleteExpense,
-        stocks,
+        stocks, deleteStock,
         rawMaterialUsage, addRawMaterialUsage, updateRawMaterialUsage, deleteRawMaterialUsage
     } = useData();
 
@@ -29,6 +29,8 @@ const Expenses = ({ onNavigateBack }) => {
     const [usageQuantity, setUsageQuantity] = useState('');
     const [usageUnit, setUsageUnit] = useState('kg');
     const [usageNotes, setUsageNotes] = useState('');
+    const [usageCost, setUsageCost] = useState('');
+    const [usageCostType, setUsageCostType] = useState('auto'); // 'auto' | 'manual'
 
     // --- Filters ---
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -36,6 +38,44 @@ const Expenses = ({ onNavigateBack }) => {
     const [filterCategory, setFilterCategory] = useState('All');
 
     // --- Helper Functions ---
+    const calculateAveragePrice = (materialName) => {
+        if (!materialName) return 0;
+
+        // Find all purchases for this material AND unit
+        // We must filter by unit to avoid mixing different units (e.g. kg vs g)
+        const purchases = expenses.filter(e =>
+            e.category === 'Raw Material' &&
+            e.materialName === materialName &&
+            e.unit === usageUnit &&
+            e.quantity > 0 &&
+            e.amount > 0
+        );
+
+        if (purchases.length === 0) return 0;
+
+        // Calculate total cost and total quantity to get weighted average
+        // Explicitly cast to Number to avoid any string concatenation issues
+        const totalCost = purchases.reduce((sum, p) => sum + Number(p.amount), 0);
+        const totalQty = purchases.reduce((sum, p) => sum + Number(p.quantity), 0);
+
+        // DEBUG: Remove this after fixing
+        console.log(`Found ${purchases.length} records for ${materialName} (${usageUnit})`);
+        console.log('Records:', purchases.map(p => `${p.quantity} @ ${p.amount}`).join(', '));
+        console.log(`Total Cost: ${totalCost}, Total Qty: ${totalQty}, Avg: ${totalCost / totalQty}`);
+        alert(`Debug: Found ${purchases.length} records.\nTotal Cost: ${totalCost}\nTotal Qty: ${totalQty}\nAvg: ${totalCost / totalQty}`);
+
+        return totalQty > 0 ? totalCost / totalQty : 0;
+    };
+
+    // Update cost when quantity or material changes (if auto)
+    React.useEffect(() => {
+        if (usageCostType === 'auto' && usageMaterialName && usageQuantity) {
+            const avgPrice = calculateAveragePrice(usageMaterialName);
+            const calculatedCost = avgPrice * Number(usageQuantity);
+            setUsageCost(calculatedCost.toFixed(2));
+        }
+    }, [usageMaterialName, usageQuantity, usageCostType, expenses]);
+
     const resetExpForm = () => {
         setExpId(null);
         setExpDate(new Date().toISOString().split('T')[0]);
@@ -54,6 +94,8 @@ const Expenses = ({ onNavigateBack }) => {
         setUsageQuantity('');
         setUsageUnit('kg');
         setUsageNotes('');
+        setUsageCost('');
+        setUsageCostType('auto');
     };
 
     // --- Handlers ---
@@ -112,7 +154,8 @@ const Expenses = ({ onNavigateBack }) => {
             materialName: usageMaterialName,
             quantityUsed: Number(usageQuantity),
             unit: usageUnit,
-            notes: usageNotes
+            notes: usageNotes,
+            cost: Number(usageCost)
         };
 
         if (usageId) {
@@ -132,6 +175,8 @@ const Expenses = ({ onNavigateBack }) => {
         setUsageQuantity(usage.quantityUsed);
         setUsageUnit(usage.unit);
         setUsageNotes(usage.notes || '');
+        setUsageCost(usage.cost || '');
+        setUsageCostType('manual'); // Default to manual when editing to preserve exact value
         setActiveTab('usage');
     };
 
@@ -155,46 +200,18 @@ const Expenses = ({ onNavigateBack }) => {
         [rawMaterialUsage, selectedMonth, selectedYear]
     );
 
-    // Stock Calculations
+    // Use actual backend stock values (carries forward across months)
     const stockData = useMemo(() => {
-        // Group all raw materials from expenses and usage
-        const materialMap = new Map();
-
-        // Add from expenses
-        expenses
-            .filter(e => e.category === 'Raw Material' && e.materialName && e.unit && e.quantity)
-            .forEach(e => {
-                const key = `${e.materialName}_${e.unit}`;
-                if (!materialMap.has(key)) {
-                    materialMap.set(key, { name: e.materialName, unit: e.unit, added: 0, used: 0 });
-                }
-                materialMap.get(key).added += Number(e.quantity);
-            });
-
-        // Add from usage
-        rawMaterialUsage
-            .filter(u => u.materialName && u.unit && u.quantityUsed)
-            .forEach(u => {
-                const key = `${u.materialName}_${u.unit}`;
-                if (!materialMap.has(key)) {
-                    materialMap.set(key, { name: u.materialName, unit: u.unit, added: 0, used: 0 });
-                }
-                materialMap.get(key).used += Number(u.quantityUsed);
-            });
-
-        // Convert to array and calculate current stock
-        return Array.from(materialMap.values()).map(item => ({
+        // Use backend stock data directly - this carries forward across months
+        return stocks.rawMaterials.map(item => ({
             name: item.name,
             unit: item.unit,
-            opening: 0, // No opening balance - everything is transactional
-            added: item.added,
-            used: item.used,
-            current: item.added - item.used, // Current = Added - Used
-            qty: item.added - item.used // For compatibility
+            qty: Number(item.qty),
+            current: Number(item.qty)
         }));
-    }, [expenses, rawMaterialUsage]);
+    }, [stocks.rawMaterials]);
 
-    const totalExpensesAmount = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalExpensesAmount = filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
     return (
         <div className="space-y-6 pb-20">
@@ -331,31 +348,49 @@ const Expenses = ({ onNavigateBack }) => {
             {activeTab === 'rawstock' && (
                 <div className="space-y-4">
                     <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><Package size={20} /> Stock Overview</h3>
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-semibold text-gray-700 flex items-center gap-2"><Package size={20} /> Stock Overview</h3>
+                            <button
+                                onClick={async () => {
+                                    const userInput = prompt('⚠️ WARNING: This will clear ALL raw material stock!\n\nType "CONFIRM" (in capital letters) to proceed:');
+                                    if (userInput === 'CONFIRM') {
+                                        try {
+                                            // Delete all raw material stocks in parallel
+                                            await Promise.all(
+                                                stocks.rawMaterials.map(item => deleteStock('raw_material', item.name))
+                                            );
+                                            alert('All raw material stocks cleared successfully.');
+                                        } catch (error) {
+                                            console.error("Error clearing stocks:", error);
+                                            alert('Error clearing stocks. Check console for details.');
+                                        }
+                                    } else if (userInput !== null) {
+                                        alert('Stock clear cancelled. You must type "CONFIRM" exactly.');
+                                    }
+                                }}
+                                className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 flex items-center gap-1"
+                            >
+                                <Trash2 size={14} /> Clear All Stock
+                            </button>
+                        </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
                                 <thead className="text-xs text-gray-500 uppercase bg-gray-50">
                                     <tr>
                                         <th className="px-3 py-2">Material</th>
-                                        <th className="px-3 py-2 text-right">Opening</th>
-                                        <th className="px-3 py-2 text-right text-green-600">Added</th>
-                                        <th className="px-3 py-2 text-right text-red-600">Used</th>
-                                        <th className="px-3 py-2 text-right font-bold">Current</th>
+                                        <th className="px-3 py-2 text-right">Unit</th>
+                                        <th className="px-3 py-2 text-right font-bold">Current Stock</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
                                     {stockData.length === 0 ? (
-                                        <tr><td colSpan="5" className="px-3 py-4 text-center text-gray-500">No raw materials found</td></tr>
+                                        <tr><td colSpan="3" className="px-3 py-4 text-center text-gray-500">No raw materials in stock</td></tr>
                                     ) : (
                                         stockData.map((item, idx) => (
                                             <tr key={idx}>
-                                                <td className="px-3 py-2 font-medium">
-                                                    {item.name} <span className="text-xs text-gray-400">({item.unit})</span>
-                                                </td>
-                                                <td className="px-3 py-2 text-right text-gray-600">{item.opening.toFixed(1)}</td>
-                                                <td className="px-3 py-2 text-right text-green-600">+{item.added.toFixed(1)}</td>
-                                                <td className="px-3 py-2 text-right text-red-600">-{item.used.toFixed(1)}</td>
-                                                <td className="px-3 py-2 text-right font-bold">{item.current.toFixed(1)}</td>
+                                                <td className="px-3 py-2 font-medium">{item.name}</td>
+                                                <td className="px-3 py-2 text-right text-gray-600">{item.unit}</td>
+                                                <td className="px-3 py-2 text-right font-bold text-lg">{item.current.toFixed(1)}</td>
                                             </tr>
                                         ))
                                     )}
@@ -363,8 +398,8 @@ const Expenses = ({ onNavigateBack }) => {
                             </table>
                         </div>
                         <div className="mt-4 text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                            <p><strong>Note:</strong> Current Stock = Opening + Added - Used.</p>
-                            <p>To add stock, create a "Raw Material" expense.</p>
+                            <p><strong>Note:</strong> Stock values carry forward across months automatically.</p>
+                            <p>Add stock by creating "Raw Material" expenses. Reduce stock by recording usage.</p>
                         </div>
                     </div>
                 </div>
@@ -407,6 +442,47 @@ const Expenses = ({ onNavigateBack }) => {
                                     <label className="block text-xs font-medium mb-1">Unit</label>
                                     <input type="text" value={usageUnit} readOnly className="w-full border rounded p-2 bg-gray-100 text-gray-500" />
                                 </div>
+                            </div>
+
+                            {/* Cost Calculation Section */}
+                            <div className="bg-purple-50 p-3 rounded border border-purple-100 space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <label className="block text-xs font-medium text-purple-800">Usage Cost (₹)</label>
+                                    <div className="flex gap-2 text-xs">
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="costType"
+                                                checked={usageCostType === 'auto'}
+                                                onChange={() => setUsageCostType('auto')}
+                                            /> Auto Detect
+                                        </label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="costType"
+                                                checked={usageCostType === 'manual'}
+                                                onChange={() => setUsageCostType('manual')}
+                                            /> Manual
+                                        </label>
+                                    </div>
+                                </div>
+                                <input
+                                    type="number"
+                                    value={usageCost}
+                                    onChange={(e) => {
+                                        setUsageCost(e.target.value);
+                                        setUsageCostType('manual'); // Switch to manual if user edits
+                                    }}
+                                    className={`w-full border rounded p-2 ${usageCostType === 'auto' ? 'bg-gray-100' : 'bg-white'}`}
+                                    placeholder="0.00"
+                                    readOnly={usageCostType === 'auto'}
+                                />
+                                {usageCostType === 'auto' && usageMaterialName && (
+                                    <p className="text-[10px] text-purple-600">
+                                        * Calculated based on average purchase price of {usageMaterialName}
+                                    </p>
+                                )}
                             </div>
 
                             <input type="text" value={usageNotes} onChange={(e) => setUsageNotes(e.target.value)} className="w-full border rounded p-2" placeholder="Notes (optional)" />

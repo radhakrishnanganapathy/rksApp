@@ -49,20 +49,24 @@ export const DataProvider = ({ children }) => {
         employeeId: a.employee_id
     });
 
-    const mapPurchase = (p) => ({
+    const mapProduction = (p) => ({
         ...p,
-        materialName: p.material_name
+        batchNumber: p.batch_number,
+        packedQty: p.packed_qty ? Number(p.packed_qty) : 0
     });
 
     const mapExpense = (e) => ({
         ...e,
-        materialName: e.material_name
+        materialName: e.material_name,
+        amount: Number(e.amount),
+        quantity: e.quantity ? Number(e.quantity) : null
     });
 
     const mapUsage = (u) => ({
         ...u,
         materialName: u.material_name,
-        quantityUsed: u.quantity_used
+        quantityUsed: u.quantity_used,
+        cost: Number(u.cost || 0)
     });
 
     // Fetch Initial Data
