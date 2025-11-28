@@ -39,6 +39,20 @@ const initializeTables = async () => {
             );
         `);
 
+        // Migration: Add buy_type column if it doesn't exist and backfill data
+        try {
+            await db.query(`
+                ALTER TABLE sales 
+                ADD COLUMN IF NOT EXISTS buy_type TEXT DEFAULT 'regular';
+            `);
+            await db.query(`
+                UPDATE sales SET buy_type = 'regular' WHERE buy_type IS NULL;
+            `);
+            console.log("Migration: Checked/Added buy_type column and backfilled data");
+        } catch (err) {
+            console.error("Migration Error:", err);
+        }
+
         // Orders Table
         await db.query(`
             CREATE TABLE IF NOT EXISTS orders (

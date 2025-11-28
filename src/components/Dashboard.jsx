@@ -22,27 +22,43 @@ const Dashboard = () => {
         const regularSales = sales.filter(sale => !sale.buyType || sale.buyType === 'regular');
         return filterByMonthYear(regularSales, selectedMonth, selectedYear);
     }, [sales, selectedMonth, selectedYear]);
+
+    // Filter delivered orders for the same period
+    const filteredDeliveredOrders = useMemo(() => {
+        const deliveredOrders = orders.filter(order => order.status === 'delivered');
+        return filterByMonthYear(deliveredOrders, selectedMonth, selectedYear, 'dueDate');
+    }, [orders, selectedMonth, selectedYear]);
+
     const filteredProduction = useMemo(() => filterByMonthYear(production, selectedMonth, selectedYear), [production, selectedMonth, selectedYear]);
     const filteredExpenses = useMemo(() => filterByMonthYear(expenses, selectedMonth, selectedYear), [expenses, selectedMonth, selectedYear]);
 
-    // Calculate Totals
-    const totalSales = filteredSales.reduce((sum, item) => sum + Number(item.total), 0);
-    const totalExpenses = filteredExpenses.reduce((sum, item) => sum + Number(item.amount), 0);
-    const totalProductionQty = filteredProduction.reduce((sum, item) => sum + Number(item.qty), 0);
+    // Helper for safe number conversion
+    const safeNum = (val) => {
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    };
 
-    // Calculate total sales in kg
+    // Calculate Totals - Include both sales AND delivered orders
+    const totalSales = filteredSales.reduce((sum, item) => sum + safeNum(item.total), 0) +
+        filteredDeliveredOrders.reduce((sum, item) => sum + safeNum(item.total), 0);
+    const totalExpenses = filteredExpenses.reduce((sum, item) => sum + safeNum(item.amount), 0);
+    const totalProductionQty = filteredProduction.reduce((sum, item) => sum + safeNum(item.qty), 0);
+
+    // Calculate total sales in kg - Include both sales AND delivered orders
     const totalSalesKg = filteredSales.reduce((sum, sale) => {
-        return sum + sale.items.reduce((itemSum, item) => itemSum + Number(item.qty), 0);
+        return sum + sale.items.reduce((itemSum, item) => itemSum + safeNum(item.qty), 0);
+    }, 0) + filteredDeliveredOrders.reduce((sum, order) => {
+        return sum + order.items.reduce((itemSum, item) => itemSum + safeNum(item.qty), 0);
     }, 0);
 
     // Calculate total stocks in kg
-    const totalStocksKg = stocks.products.reduce((sum, product) => sum + Number(product.qty), 0);
+    const totalStocksKg = stocks.products.reduce((sum, product) => sum + safeNum(product.qty), 0);
 
-    // Calculate total unpaid amount (only regular sales, not order-converted)
+    // Calculate total unpaid amount (regular sales + unpaid orders)
     const totalUnpaid = useMemo(() => {
         const unpaidSales = sales.filter(sale => sale.paymentStatus === 'not_paid' && (!sale.buyType || sale.buyType === 'regular'));
         const unpaidOrders = orders.filter(order => order.paymentStatus === 'not_paid');
-        return [...unpaidSales, ...unpaidOrders].reduce((sum, item) => sum + Number(item.total), 0);
+        return [...unpaidSales, ...unpaidOrders].reduce((sum, item) => sum + safeNum(item.total), 0);
     }, [sales, orders]);
 
     // Profit Calculation (Simplified: Sales - Expenses)
@@ -79,19 +95,25 @@ const Dashboard = () => {
     const usageBasedExpense = totalUsageCost + operationalExpenses + totalSalary;
 
     // Chart Data Preparation
-    // 1. Total quantity (kg) sold per item – used for Pie & Bar charts
+    // 1. Total quantity (kg) sold per item – used for Pie & Bar charts (includes delivered orders)
     const salesKgByItem = useMemo(() => {
         const data = {};
+        // Add sales
         filteredSales.forEach(sale => {
             sale.items.forEach(item => {
-                // Assume qty is in kg (or appropriate unit)
-                data[item.name] = (data[item.name] || 0) + Number(item.qty);
+                data[item.name] = (data[item.name] || 0) + safeNum(item.qty);
+            });
+        });
+        // Add delivered orders
+        filteredDeliveredOrders.forEach(order => {
+            order.items.forEach(item => {
+                data[item.name] = (data[item.name] || 0) + safeNum(item.qty);
             });
         });
         return Object.keys(data).map(name => ({ name, value: data[name] }));
-    }, [filteredSales]);
+    }, [filteredSales, filteredDeliveredOrders]);
 
-    // 2. Sales data for Line chart – Daily or Monthly based on filter
+    // 2. Sales data for Line chart – Daily or Monthly based on filter (includes delivered orders)
     const dailySales = useMemo(() => {
         const data = {};
 
@@ -100,7 +122,13 @@ const Dashboard = () => {
             filteredSales.forEach(sale => {
                 const date = new Date(sale.date);
                 const monthName = date.toLocaleString('default', { month: 'short' });
-                const total = sale.items.reduce((sum, it) => sum + it.qty * it.price, 0);
+                const total = sale.items.reduce((sum, it) => sum + safeNum(it.qty) * safeNum(it.price), 0);
+                data[monthName] = (data[monthName] || 0) + total;
+            });
+            filteredDeliveredOrders.forEach(order => {
+                const date = new Date(order.dueDate);
+                const monthName = date.toLocaleString('default', { month: 'short' });
+                const total = order.items.reduce((sum, it) => sum + safeNum(it.qty) * safeNum(it.price), 0);
                 data[monthName] = (data[monthName] || 0) + total;
             });
 
@@ -113,7 +141,12 @@ const Dashboard = () => {
             // Specific month selected: Aggregate by day
             filteredSales.forEach(sale => {
                 const day = new Date(sale.date).toLocaleDateString();
-                const total = sale.items.reduce((sum, it) => sum + it.qty * it.price, 0);
+                const total = sale.items.reduce((sum, it) => sum + safeNum(it.qty) * safeNum(it.price), 0);
+                data[day] = (data[day] || 0) + total;
+            });
+            filteredDeliveredOrders.forEach(order => {
+                const day = new Date(order.dueDate).toLocaleDateString();
+                const total = order.items.reduce((sum, it) => sum + safeNum(it.qty) * safeNum(it.price), 0);
                 data[day] = (data[day] || 0) + total;
             });
 
@@ -123,7 +156,7 @@ const Dashboard = () => {
                 .map(date => ({ name: date, value: data[date] }));
             return sorted;
         }
-    }, [filteredSales, selectedMonth]);
+    }, [filteredSales, filteredDeliveredOrders, selectedMonth]);
 
     const productionByItem = useMemo(() => {
         const data = {};

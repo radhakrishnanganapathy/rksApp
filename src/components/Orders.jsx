@@ -4,7 +4,7 @@ import { formatCurrency } from '../utils';
 import { Plus, Trash2, Save, ClipboardList, Package, Calendar, CheckCircle, XCircle, Clock, Edit, ArrowLeft } from 'lucide-react';
 
 const Orders = ({ onNavigateBack }) => {
-    const { customers, items, stocks, orders, addOrder, updateOrder, updateOrderStatus, convertOrderToSale, clearOrder, deleteOrder } = useData();
+    const { customers, items, stocks, orders, addOrder, updateOrder, updateOrderStatus, convertOrderToSale, clearOrder, deleteOrder, updateStock } = useData();
 
     const [activeTab, setActiveTab] = useState('new'); // 'new' or 'list'
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -132,25 +132,37 @@ const Orders = ({ onNavigateBack }) => {
     const confirmDelivery = async () => {
         if (!deliveryOrderId) return;
 
+        const order = orders.find(o => o.id === deliveryOrderId);
+        if (!order) return;
+
+        // Update order status to delivered
         await updateOrderStatus(deliveryOrderId, 'delivered');
-        await convertOrderToSale(deliveryOrderId, deliveryPaymentStatus);
+
+        // Update payment status if changed
+        if (deliveryPaymentStatus !== order.paymentStatus) {
+            const updatedOrder = {
+                ...order,
+                paymentStatus: deliveryPaymentStatus,
+                amountReceived: deliveryPaymentStatus === 'paid' ? order.total : 0
+            };
+            await updateOrder(deliveryOrderId, updatedOrder);
+        }
+
+        // Decrease stock for each item in the order
+        for (const item of order.items) {
+            const stockItem = stocks.products.find(p => p.name === item.name);
+            if (stockItem) {
+                const newQty = Number(stockItem.qty) - Number(item.qty);
+                // Only update if we have a valid stock item
+                if (newQty >= 0) {
+                    await updateStock('products', item.name, { ...stockItem, qty: newQty });
+                }
+            }
+        }
 
         setShowDeliveryDialog(false);
         setDeliveryOrderId(null);
-        alert('Order marked as delivered and added to sales!');
-    };
-
-    const handleClearOrder = async (orderId) => {
-        if (!window.confirm('Clear this order? It will be moved to sales and removed from the order list.')) {
-            return;
-        }
-
-        const order = orders.find(o => o.id === orderId);
-        if (!order) return;
-
-        // Use the order's current payment status
-        await clearOrder(orderId, order.paymentStatus || 'paid');
-        alert('Order cleared and moved to sales!');
+        alert('Order marked as delivered!');
     };
 
     const handleCancelOrder = (orderId) => {
@@ -495,16 +507,6 @@ const Orders = ({ onNavigateBack }) => {
                                                     Cancel
                                                 </button>
                                             </>
-                                        )}
-                                        {order.status === 'delivered' && (
-                                            <button
-                                                onClick={() => handleClearOrder(order.id)}
-                                                className="bg-purple-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
-                                                title="Clear from list and move to sales"
-                                            >
-                                                <Package size={14} />
-                                                Clear
-                                            </button>
                                         )}
                                     </div>
                                 </div>
