@@ -92,7 +92,7 @@ export const DataProvider = ({ children }) => {
                 const data = await Promise.all(responses.map(res => res.json()));
 
                 setSales(data[0]?.map(mapSale) || []);
-                setProduction(data[1] || []);
+                setProduction(data[1]?.map(mapProduction) || []);
                 setExpenses(data[2]?.map(mapExpense) || []);
                 setStocks(data[3] || { products: [], rawMaterials: [] });
                 setCustomers(data[4] || []);
@@ -149,7 +149,7 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify(newProd)
             });
             const savedProd = await res.json();
-            setProduction([savedProd, ...production]);
+            setProduction([mapProduction(savedProd), ...production]);
 
             // Update stock
             await fetch(`${API_URL}/stocks`, {
@@ -525,7 +525,7 @@ export const DataProvider = ({ children }) => {
     const updateOrder = (id, data) => updateItem('orders', id, data, setOrders, orders, mapOrder);
 
     const deleteProduction = (id) => deleteItem('production', id, setProduction, production);
-    const updateProduction = (id, data) => updateItem('production', id, data, setProduction, production);
+    const updateProduction = (id, data) => updateItem('production', id, data, setProduction, production, mapProduction);
 
 
 
