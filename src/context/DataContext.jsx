@@ -246,19 +246,38 @@ export const DataProvider = ({ children }) => {
     const addRawMaterialUsage = async (usage) => {
         const newUsage = { ...usage, id: Date.now() };
         try {
+            console.log('Adding raw material usage:', newUsage);
             const res = await fetch(`${API_URL}/raw-material-usage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newUsage)
             });
+
+            if (!res.ok) {
+                console.error('Failed to add usage, status:', res.status);
+                const errorText = await res.text();
+                console.error('Error response:', errorText);
+                throw new Error(`Failed to add usage: ${res.status}`);
+            }
+
             const savedUsage = await res.json();
+            console.log('Saved usage:', savedUsage);
             const mappedUsage = mapUsage(savedUsage);
+            console.log('Mapped usage:', mappedUsage);
             setRawMaterialUsage(prev => [mappedUsage, ...prev]);
 
             // Decrease Stock
+            console.log('Decreasing stock:', {
+                type: 'raw_material',
+                material: mappedUsage.materialName,
+                quantity: -Number(mappedUsage.quantityUsed),
+                unit: mappedUsage.unit
+            });
             await addStock('raw_material', mappedUsage.materialName, -Number(mappedUsage.quantityUsed), mappedUsage.unit);
+            console.log('Stock decrease completed');
         } catch (err) {
             console.error("Error adding usage:", err);
+            alert('Error adding usage: ' + err.message);
         }
     };
 

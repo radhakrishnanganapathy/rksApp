@@ -111,6 +111,19 @@ const createTables = async () => {
             );
         `);
 
+        // Raw Material Usage Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS raw_material_usage (
+                id BIGINT PRIMARY KEY,
+                date DATE NOT NULL,
+                material_name TEXT NOT NULL,
+                quantity_used NUMERIC NOT NULL,
+                unit TEXT NOT NULL,
+                notes TEXT,
+                cost NUMERIC DEFAULT 0
+            );
+        `);
+
         console.log('All tables created successfully!');
         process.exit(0);
     } catch (err) {

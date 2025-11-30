@@ -37,12 +37,12 @@ const Stats = ({ onNavigateBack }) => {
 
         // Total Sales (kg and amount)
         const totalSalesKg = filteredData.sales.reduce((sum, sale) =>
-            sum + sale.items.reduce((s, item) => s + item.qty, 0), 0
+            sum + sale.items.reduce((s, item) => s + Number(item.qty), 0), 0
         );
-        const totalSalesAmount = filteredData.sales.reduce((sum, sale) => sum + sale.total, 0);
+        const totalSalesAmount = filteredData.sales.reduce((sum, sale) => sum + Number(sale.total), 0);
 
         // Total Expenses
-        const totalExpenses = filteredData.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+        const totalExpenses = filteredData.expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
 
         // Total Salary Given
         const totalSalary = filteredData.attendance
@@ -77,8 +77,8 @@ const Stats = ({ onNavigateBack }) => {
                 if (!itemData[item.name]) {
                     itemData[item.name] = { kg: 0, earn: 0 };
                 }
-                itemData[item.name].kg += item.qty;
-                itemData[item.name].earn += item.qty * item.price;
+                itemData[item.name].kg += Number(item.qty);
+                itemData[item.name].earn += Number(item.qty) * Number(item.price);
             });
         });
         return Object.keys(itemData).map(name => ({
@@ -98,7 +98,7 @@ const Stats = ({ onNavigateBack }) => {
                 customerData[customerName] = { sales: 0, earn: 0, customerId: sale.customerId };
             }
             customerData[customerName].sales += 1;
-            customerData[customerName].earn += sale.total;
+            customerData[customerName].earn += Number(sale.total);
         });
         return Object.keys(customerData).map(name => ({
             name,
@@ -118,8 +118,8 @@ const Stats = ({ onNavigateBack }) => {
                     if (!itemData[item.name]) {
                         itemData[item.name] = { qty: 0, earn: 0 };
                     }
-                    itemData[item.name].qty += item.qty;
-                    itemData[item.name].earn += item.qty * item.price;
+                    itemData[item.name].qty += Number(item.qty);
+                    itemData[item.name].earn += Number(item.qty) * Number(item.price);
                 });
             });
 

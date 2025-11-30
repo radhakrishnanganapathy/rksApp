@@ -6,7 +6,7 @@ import { formatCurrency, filterByMonthYear } from '../utils';
 const Expenses = ({ onNavigateBack }) => {
     const {
         expenses, addExpense, updateExpense, deleteExpense,
-        stocks, deleteStock,
+        stocks, updateStock, deleteStock,
         rawMaterialUsage, addRawMaterialUsage, updateRawMaterialUsage, deleteRawMaterialUsage
     } = useData();
 
@@ -21,6 +21,17 @@ const Expenses = ({ onNavigateBack }) => {
     const [expQuantity, setExpQuantity] = useState('');
     const [expAmount, setExpAmount] = useState('');
     const [expNotes, setExpNotes] = useState('');
+
+    // --- Tab 2: Raw Material Stock Edit Modal ---
+    const [showStockEditModal, setShowStockEditModal] = useState(false);
+    const [editingStockItem, setEditingStockItem] = useState(null);
+    const [stockEditQty, setStockEditQty] = useState('');
+    const [stockEditUnit, setStockEditUnit] = useState('kg');
+
+    // --- Tab 2: Add Stock Form ---
+    const [addStockMaterialName, setAddStockMaterialName] = useState('');
+    const [addStockQty, setAddStockQty] = useState('');
+    const [addStockUnit, setAddStockUnit] = useState('kg');
 
     // --- Tab 3: Raw Material Usage ---
     const [usageId, setUsageId] = useState(null); // For editing
@@ -147,6 +158,7 @@ const Expenses = ({ onNavigateBack }) => {
     };
 
     const handleSaveUsage = async () => {
+        console.log('handleSaveUsage called');
         if (!usageMaterialName || !usageQuantity) return alert('Material and Quantity are required');
 
         const usageData = {
@@ -183,6 +195,72 @@ const Expenses = ({ onNavigateBack }) => {
     const handleDeleteUsage = async (id) => {
         if (window.confirm('Are you sure you want to delete this usage? Stock will be reverted.')) {
             await deleteRawMaterialUsage(id);
+        }
+    };
+
+    // --- Raw Material Stock Handlers ---
+    const handleEditStock = (item) => {
+        setEditingStockItem(item);
+        setStockEditQty(item.qty);
+        setStockEditUnit(item.unit);
+        setShowStockEditModal(true);
+    };
+
+    const handleUpdateStock = async () => {
+        if (!stockEditQty || stockEditQty <= 0) {
+            alert('Please enter a valid quantity');
+            return;
+        }
+        try {
+            await updateStock('raw_material', editingStockItem.name, {
+                name: editingStockItem.name,
+                qty: Number(stockEditQty),
+                unit: stockEditUnit
+            });
+            alert('Stock updated successfully!');
+            setShowStockEditModal(false);
+            setEditingStockItem(null);
+            setStockEditQty('');
+            setStockEditUnit('kg');
+        } catch (error) {
+            console.error('Error updating stock:', error);
+            alert('Failed to update stock. Please try again.');
+        }
+    };
+
+    const handleDeleteStock = async (item) => {
+        if (window.confirm(`Are you sure you want to delete ${item.name} from stock?`)) {
+            try {
+                await deleteStock('raw_material', item.name);
+                alert('Stock deleted successfully!');
+            } catch (error) {
+                console.error('Error deleting stock:', error);
+                alert('Failed to delete stock. Please try again.');
+            }
+        }
+    };
+
+    const closeStockEditModal = () => {
+        setShowStockEditModal(false);
+        setEditingStockItem(null);
+        setStockEditQty('');
+        setStockEditUnit('kg');
+    };
+
+    const handleAddStock = async () => {
+        if (!addStockMaterialName || !addStockQty || addStockQty <= 0) {
+            alert('Please enter material name and valid quantity');
+            return;
+        }
+        try {
+            await addStock('raw_material', addStockMaterialName, Number(addStockQty), addStockUnit);
+            alert('Stock added successfully!');
+            setAddStockMaterialName('');
+            setAddStockQty('');
+            setAddStockUnit('kg');
+        } catch (error) {
+            console.error('Error adding stock:', error);
+            alert('Failed to add stock. Please try again.');
         }
     };
 
@@ -347,6 +425,70 @@ const Expenses = ({ onNavigateBack }) => {
             {/* --- Tab 2: Raw Material Stock --- */}
             {activeTab === 'rawstock' && (
                 <div className="space-y-4">
+                    {/* Add Stock Form */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
+                        <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+                            <Package size={20} className="text-green-600" /> Add Stock
+                        </h3>
+
+                        <div className="grid grid-cols-1 gap-3">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Material Name</label>
+                                <input
+                                    type="text"
+                                    value={addStockMaterialName}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setAddStockMaterialName(val);
+                                        // Auto-fill unit if material already exists
+                                        const item = stocks.rawMaterials.find(s => s.name === val);
+                                        if (item) setAddStockUnit(item.unit);
+                                    }}
+                                    className="w-full border rounded p-2"
+                                    placeholder="e.g. Rice Flour, Oil, Sugar"
+                                    list="add-stock-material-suggestions"
+                                />
+                                <datalist id="add-stock-material-suggestions">
+                                    {stocks.rawMaterials.map((s, i) => <option key={i} value={s.name} />)}
+                                </datalist>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Quantity</label>
+                                    <input
+                                        type="number"
+                                        value={addStockQty}
+                                        onChange={(e) => setAddStockQty(e.target.value)}
+                                        className="w-full border rounded p-2"
+                                        placeholder="0"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Unit</label>
+                                    <select
+                                        value={addStockUnit}
+                                        onChange={(e) => setAddStockUnit(e.target.value)}
+                                        className="w-full border rounded p-2"
+                                    >
+                                        <option value="kg">kg</option>
+                                        <option value="lt">lt</option>
+                                        <option value="count">count</option>
+                                        <option value="box">box</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleAddStock}
+                            className="w-full bg-green-600 text-white py-2 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-green-700"
+                        >
+                            <Save size={18} /> Add Stock
+                        </button>
+                    </div>
+
+                    {/* Stock Overview Table */}
                     <div className="bg-white p-4 rounded-lg shadow-sm">
                         <div className="flex justify-between items-center mb-3">
                             <h3 className="font-semibold text-gray-700 flex items-center gap-2"><Package size={20} /> Stock Overview</h3>
@@ -380,17 +522,36 @@ const Expenses = ({ onNavigateBack }) => {
                                         <th className="px-3 py-2">Material</th>
                                         <th className="px-3 py-2 text-right">Unit</th>
                                         <th className="px-3 py-2 text-right font-bold">Current Stock</th>
+                                        <th className="px-3 py-2 text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
                                     {stockData.length === 0 ? (
-                                        <tr><td colSpan="3" className="px-3 py-4 text-center text-gray-500">No raw materials in stock</td></tr>
+                                        <tr><td colSpan="4" className="px-3 py-4 text-center text-gray-500">No raw materials in stock</td></tr>
                                     ) : (
                                         stockData.map((item, idx) => (
                                             <tr key={idx}>
                                                 <td className="px-3 py-2 font-medium">{item.name}</td>
                                                 <td className="px-3 py-2 text-right text-gray-600">{item.unit}</td>
                                                 <td className="px-3 py-2 text-right font-bold text-lg">{item.current.toFixed(1)}</td>
+                                                <td className="px-3 py-2">
+                                                    <div className="flex justify-center gap-2">
+                                                        <button
+                                                            onClick={() => handleEditStock(item)}
+                                                            className="text-blue-600 p-1 bg-blue-50 rounded hover:bg-blue-100"
+                                                            title="Edit Stock"
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteStock(item)}
+                                                            className="text-red-600 p-1 bg-red-50 rounded hover:bg-red-100"
+                                                            title="Delete Stock"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         ))
                                     )}
@@ -402,6 +563,72 @@ const Expenses = ({ onNavigateBack }) => {
                             <p>Add stock by creating "Raw Material" expenses. Reduce stock by recording usage.</p>
                         </div>
                     </div>
+
+                    {/* Edit Stock Modal */}
+                    {showStockEditModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-lg p-6 w-full max-w-sm space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="text-lg font-bold text-gray-800">Edit Stock</h3>
+                                    <button onClick={closeStockEditModal} className="text-gray-500 hover:text-gray-700">
+                                        <X size={20} />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1 text-gray-700">Material Name</label>
+                                        <input
+                                            type="text"
+                                            value={editingStockItem?.name || ''}
+                                            readOnly
+                                            className="w-full border rounded p-2 bg-gray-100 text-gray-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1 text-gray-700">Quantity</label>
+                                        <input
+                                            type="number"
+                                            value={stockEditQty}
+                                            onChange={(e) => setStockEditQty(e.target.value)}
+                                            className="w-full border rounded p-2"
+                                            placeholder="Enter quantity"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1 text-gray-700">Unit</label>
+                                        <select
+                                            value={stockEditUnit}
+                                            onChange={(e) => setStockEditUnit(e.target.value)}
+                                            className="w-full border rounded p-2"
+                                        >
+                                            <option value="kg">kg</option>
+                                            <option value="lt">lt</option>
+                                            <option value="count">count</option>
+                                            <option value="box">box</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2 mt-4">
+                                    <button
+                                        onClick={closeStockEditModal}
+                                        className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-300"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleUpdateStock}
+                                        className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2"
+                                    >
+                                        <Save size={18} /> Update
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

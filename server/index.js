@@ -14,6 +14,10 @@ const initializeTables = async () => {
     try {
         console.log('Checking database tables...');
 
+        // Log connection details for debugging
+        const dbInfo = await db.query('SELECT current_database(), current_user, inet_server_addr()');
+        console.log('🔌 Connected to Database:', dbInfo.rows[0]);
+
         // Customers Table
         await db.query(`
             CREATE TABLE IF NOT EXISTS customers (
@@ -156,9 +160,29 @@ const initializeTables = async () => {
                 material_name TEXT NOT NULL,
                 quantity_used NUMERIC NOT NULL,
                 unit TEXT NOT NULL,
-                notes TEXT
+                notes TEXT,
+                cost NUMERIC DEFAULT 0
             );
         `);
+
+        // Self-healing: Check if cost column exists and add it if missing
+        try {
+            const checkColumn = await db.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'raw_material_usage' AND column_name = 'cost'
+            `);
+
+            if (checkColumn.rows.length === 0) {
+                console.log('⚠️ Cost column missing in raw_material_usage. Adding it now...');
+                await db.query('ALTER TABLE raw_material_usage ADD COLUMN cost NUMERIC DEFAULT 0');
+                console.log('✅ Cost column added successfully.');
+            } else {
+                console.log('✅ Cost column exists in raw_material_usage.');
+            }
+        } catch (err) {
+            console.error('Error checking/adding cost column:', err.message);
+        }
 
         console.log('Database tables initialized successfully!');
     } catch (err) {
@@ -844,13 +868,18 @@ app.get('/api/raw-material-usage', async (req, res) => {
 
 app.post('/api/raw-material-usage', async (req, res) => {
     const { id, date, materialName, quantityUsed, unit, notes, cost } = req.body;
+    console.log('=== RAW MATERIAL USAGE POST ===');
+    console.log('Received data:', { id, date, materialName, quantityUsed, unit, notes, cost });
     try {
         const result = await db.query(
             'INSERT INTO raw_material_usage (id, date, material_name, quantity_used, unit, notes, cost) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
             [id, date, materialName, quantityUsed, unit, notes, cost || 0]
         );
+        console.log('Successfully inserted usage:', result.rows[0]);
         res.json(result.rows[0]);
     } catch (err) {
+        console.error('ERROR in raw-material-usage POST:', err.message);
+        console.error('Full error:', err);
         res.status(500).json({ error: err.message });
     }
 });
