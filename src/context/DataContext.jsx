@@ -323,7 +323,7 @@ export const DataProvider = ({ children }) => {
 
     const addStock = async (type, item, qty, unit) => {
         try {
-            await fetch(`${API_URL}/stocks`, {
+            const res = await fetch(`${API_URL}/stocks`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -333,10 +333,14 @@ export const DataProvider = ({ children }) => {
                     unit: unit || 'kg'
                 })
             });
+            if (!res.ok) throw new Error(`Failed to add stock: ${res.statusText}`);
+
             const stocksRes = await fetch(`${API_URL}/stocks`);
+            if (!stocksRes.ok) throw new Error('Failed to fetch updated stocks');
             setStocks(await stocksRes.json());
         } catch (err) {
             console.error("Error adding stock:", err);
+            throw err; // Re-throw to let component know
         }
     };
 

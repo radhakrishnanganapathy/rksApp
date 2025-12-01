@@ -13,12 +13,13 @@ import {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const Dashboard = () => {
-    const { sales, production, expenses, stocks, orders, attendance, employees, rawMaterialUsage } = useData();
+    const { sales, production, expenses, stocks, orders, attendance, employees, rawMaterialUsage, customers } = useData();
     const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
 
     const [selectedMonth, setSelectedMonth] = useState(currentMonth);
     const [selectedYear, setSelectedYear] = useState(currentYear);
     const [chartType, setChartType] = useState('bar');
+    const [customerChartType, setCustomerChartType] = useState('bar'); // 'bar' or 'pie'
 
     // Filter Data - Only show regular sales (not order-converted)
     const filteredSales = useMemo(() => {
@@ -172,6 +173,31 @@ const Dashboard = () => {
         return Object.keys(data).map(name => ({ name, value: data[name] }));
     }, [filteredProduction]);
 
+    // Calculate customer-wise total purchases
+    const customerData = useMemo(() => {
+        const data = {};
+
+        // Aggregate sales by customer
+        [...filteredSales, ...filteredDeliveredOrders].forEach(sale => {
+            const customer = customers.find(c => c.id === sale.customerId);
+            const customerName = customer ? customer.name : 'Unknown';
+
+            if (!data[customerName]) {
+                data[customerName] = 0;
+            }
+            data[customerName] += safeNum(sale.total);
+        });
+
+        return Object.keys(data)
+            .map(name => ({
+                name,
+                value: data[name]
+            }))
+            .sort((a, b) => b.value - a.value) // Sort by highest to lowest
+            .slice(0, 10); // Show top 10 customers
+    }, [filteredSales, filteredDeliveredOrders, customers]);
+
+
     // Render Item Charts (Pie or Bar)
     const renderItemChart = (type) => {
         if (salesKgByItem.length === 0) {
@@ -252,6 +278,56 @@ const Dashboard = () => {
                         activeDot={{ r: 6 }}
                     />
                 </LineChart>
+            </ResponsiveContainer>
+        );
+    };
+
+    // Render Customer Chart (Pie or Bar)
+    const renderCustomerChart = () => {
+        if (customerData.length === 0) {
+            return <p className="text-sm text-gray-500 italic text-center py-8">No customer data available</p>;
+        }
+
+        if (customerChartType === 'pie') {
+            return (
+                <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                        <Pie
+                            data={customerData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                        >
+                            {customerData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => formatCurrency(value)} />
+                        <Legend />
+                    </PieChart>
+                </ResponsiveContainer>
+            );
+        }
+
+        // Bar Chart
+        return (
+            <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={customerData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} tick={{ fontSize: 10 }} />
+                    <YAxis label={{ value: 'Total Purchase (₹)', angle: -90, position: 'insideLeft' }} />
+                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                    <Legend />
+                    <Bar dataKey="value" fill="#8884d8" name="Total Purchase">
+                        {customerData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                    </Bar>
+                </BarChart>
             </ResponsiveContainer>
         );
     };
@@ -354,7 +430,7 @@ const Dashboard = () => {
                         <Package className="text-teal-600" size={20} />
                         <p className="text-sm font-medium text-gray-600">Total Stocks</p>
                     </div>
-                    <p className="text-2xl font-bold text-gray-800">{totalStocksKg} kg</p>
+                    <p className="text-2xl font-bold text-gray-800">{totalStocksKg.toFixed(1)} kg</p>
                 </div>
 
                 {/* Row 5: Overall Expenses & Usage Based Expenses */}
@@ -400,6 +476,22 @@ const Dashboard = () => {
                     </h3>
                 </div>
                 {renderLineChart()}
+            </div>
+
+            {/* Customer Total Purchase Chart */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-semibold text-gray-700">Customer Total Purchase</h3>
+                    <select
+                        value={customerChartType}
+                        onChange={(e) => setCustomerChartType(e.target.value)}
+                        className="border rounded px-3 py-1 text-sm bg-white"
+                    >
+                        <option value="bar">Bar Chart</option>
+                        <option value="pie">Pie Chart</option>
+                    </select>
+                </div>
+                {renderCustomerChart()}
             </div>
 
             {/* Stock Summary (Mini) */}

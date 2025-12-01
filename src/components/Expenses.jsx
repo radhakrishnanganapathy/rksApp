@@ -3,6 +3,29 @@ import { useData } from '../context/DataContext';
 import { Save, Wallet, Package, TrendingDown, List, Trash2, Edit, X, ArrowLeft } from 'lucide-react';
 import { formatCurrency, filterByMonthYear } from '../utils';
 
+// Predefined Raw Materials in Tamil
+const PREDEFINED_RAW_MATERIALS = [
+    'எண்ணெய்',           // Oil
+    'எரிவாயு',          // Gas
+    'அரிசி',            // Rice
+    'அரிசி மாவு',       // Rice flour
+    'மிளகாய் தூள்',     // Chili powder
+    'பொட்டு கடலை',      // Roasted gram
+    'உளுந்து',          // Black gram
+    'முட்டை',           // Egg
+    'மைதா மாவு',        // Maida flour
+    'மிளகு',            // Pepper
+    'சோம்பு',           // Fennel
+    'சீரகம்',           // Cumin
+    'கருவேப்பிலை',      // Curry leaves
+    'மல்லித்தை (மல்லி)', // Coriander
+    'வெல்லம்',          // Jaggery
+    'ரவை',             // Rava
+    'பாக்கிங் கவர்',    // Packing cover
+    'பாக்கிங் பாக்ஸ்',  // Packing box
+    'சுக்கு'            // Dry ginger
+];
+
 const Expenses = ({ onNavigateBack }) => {
     const {
         expenses, addExpense, updateExpense, deleteExpense,
@@ -30,6 +53,7 @@ const Expenses = ({ onNavigateBack }) => {
 
     // --- Tab 2: Add Stock Form ---
     const [addStockMaterialName, setAddStockMaterialName] = useState('');
+    const [customStockName, setCustomStockName] = useState('');
     const [addStockQty, setAddStockQty] = useState('');
     const [addStockUnit, setAddStockUnit] = useState('kg');
 
@@ -248,14 +272,17 @@ const Expenses = ({ onNavigateBack }) => {
     };
 
     const handleAddStock = async () => {
-        if (!addStockMaterialName || !addStockQty || addStockQty <= 0) {
+        const materialName = addStockMaterialName === 'CUSTOM' ? customStockName : addStockMaterialName;
+
+        if (!materialName || (addStockMaterialName === 'CUSTOM' && !customStockName) || !addStockQty || addStockQty <= 0) {
             alert('Please enter material name and valid quantity');
             return;
         }
         try {
-            await addStock('raw_material', addStockMaterialName, Number(addStockQty), addStockUnit);
+            await addStock('raw_material', materialName, Number(addStockQty), addStockUnit);
             alert('Stock added successfully!');
             setAddStockMaterialName('');
+            setCustomStockName('');
             setAddStockQty('');
             setAddStockUnit('kg');
         } catch (error) {
@@ -362,8 +389,7 @@ const Expenses = ({ onNavigateBack }) => {
                                 <h4 className="text-sm font-medium text-amber-800 flex items-center gap-1"><Package size={14} /> Raw Material Details</h4>
                                 <div>
                                     <label className="block text-xs font-medium mb-1">Material Name</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         value={expMaterialName}
                                         onChange={(e) => {
                                             const val = e.target.value;
@@ -372,12 +398,27 @@ const Expenses = ({ onNavigateBack }) => {
                                             if (item) setExpUnit(item.unit);
                                         }}
                                         className="w-full border rounded p-2 text-sm"
-                                        placeholder="e.g. Sugar"
-                                        list="material-suggestions"
-                                    />
-                                    <datalist id="material-suggestions">
-                                        {stocks.rawMaterials.map((s, i) => <option key={i} value={s.name} />)}
-                                    </datalist>
+                                    >
+                                        <option value="">Select Material</option>
+                                        {/* Predefined Tamil Materials */}
+                                        {PREDEFINED_RAW_MATERIALS.map((material, idx) => (
+                                            <option key={`predefined-${idx}`} value={material}>{material}</option>
+                                        ))}
+                                        <option value="CUSTOM">➕ Add Custom Material</option>
+                                    </select>
+                                    {/* Custom Material Input */}
+                                    {expMaterialName === 'CUSTOM' && (
+                                        <div className="mt-2">
+                                            <input
+                                                type="text"
+                                                value=""
+                                                onChange={(e) => setExpMaterialName(e.target.value)}
+                                                className="w-full border rounded p-2 text-sm"
+                                                placeholder="Enter custom material name"
+                                                autoFocus
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
@@ -434,8 +475,7 @@ const Expenses = ({ onNavigateBack }) => {
                         <div className="grid grid-cols-1 gap-3">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Material Name</label>
-                                <input
-                                    type="text"
+                                <select
                                     value={addStockMaterialName}
                                     onChange={(e) => {
                                         const val = e.target.value;
@@ -445,12 +485,27 @@ const Expenses = ({ onNavigateBack }) => {
                                         if (item) setAddStockUnit(item.unit);
                                     }}
                                     className="w-full border rounded p-2"
-                                    placeholder="e.g. Rice Flour, Oil, Sugar"
-                                    list="add-stock-material-suggestions"
-                                />
-                                <datalist id="add-stock-material-suggestions">
-                                    {stocks.rawMaterials.map((s, i) => <option key={i} value={s.name} />)}
-                                </datalist>
+                                >
+                                    <option value="">Select Material</option>
+                                    {/* Predefined Tamil Materials */}
+                                    {PREDEFINED_RAW_MATERIALS.map((material, idx) => (
+                                        <option key={`predefined-${idx}`} value={material}>{material}</option>
+                                    ))}
+                                    <option value="CUSTOM">➕ Add Custom Material</option>
+                                </select>
+                                {/* Custom Material Input */}
+                                {addStockMaterialName === 'CUSTOM' && (
+                                    <div className="mt-2">
+                                        <input
+                                            type="text"
+                                            value={customStockName}
+                                            onChange={(e) => setCustomStockName(e.target.value)}
+                                            className="w-full border rounded p-2"
+                                            placeholder="Enter custom material name"
+                                            autoFocus
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">

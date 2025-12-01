@@ -5,7 +5,7 @@ import { Plus, Trash2, Save, AlertCircle, UserPlus, List, FileText } from 'lucid
 import BillingList from './BillingList';
 
 const Billing = () => {
-    const { customers, items, stocks, addSale, updateSale, sales } = useData();
+    const { customers, items, stocks, addSale, updateSale, sales, addCustomer } = useData();
 
     const [activeTab, setActiveTab] = useState('new'); // 'new' or 'list'
     const [editingSaleId, setEditingSaleId] = useState(null);
@@ -21,6 +21,13 @@ const Billing = () => {
     const [showFrequentBuyerAlert, setShowFrequentBuyerAlert] = useState(false);
 
     const [editingItemIndex, setEditingItemIndex] = useState(null);
+
+    // New Customer Modal States
+    const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+    const [newCustomerName, setNewCustomerName] = useState('');
+    const [newCustomerShopName, setNewCustomerShopName] = useState('');
+    const [newCustomerPhone, setNewCustomerPhone] = useState('');
+    const [newCustomerArea, setNewCustomerArea] = useState('');
 
     // Check for frequent buyer alert when customer changes
     useEffect(() => {
@@ -150,6 +157,34 @@ const Billing = () => {
         setActiveTab('new');
     };
 
+    const handleAddNewCustomer = () => {
+        if (!newCustomerName.trim()) {
+            alert('Customer Name is required!');
+            return;
+        }
+
+        const newCustomer = addCustomer({
+            name: newCustomerName.trim(),
+            shopName: newCustomerShopName.trim(),
+            phone: newCustomerPhone.trim(),
+            area: newCustomerArea.trim()
+        });
+
+        // Select the newly created customer
+        if (newCustomer && newCustomer.id) {
+            setSelectedCustomer(newCustomer.id);
+        }
+
+        // Close modal and reset fields
+        setShowAddCustomerModal(false);
+        setNewCustomerName('');
+        setNewCustomerShopName('');
+        setNewCustomerPhone('');
+        setNewCustomerArea('');
+
+        alert('Customer added successfully!');
+    };
+
     return (
         <div className="space-y-6 pb-20">
             {/* Tab Switcher */}
@@ -184,7 +219,13 @@ const Billing = () => {
                                 <option value="">Select Customer</option>
                                 {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
-                            <button className="p-2 bg-gray-100 rounded text-blue-600"><UserPlus size={20} /></button>
+                            <button
+                                onClick={() => setShowAddCustomerModal(true)}
+                                className="p-2 bg-gray-100 rounded text-blue-600 hover:bg-blue-50"
+                                title="Add New Customer"
+                            >
+                                <UserPlus size={20} />
+                            </button>
                         </div>
 
                         {showFrequentBuyerAlert && (
@@ -331,6 +372,77 @@ const Billing = () => {
                 </>
             ) : (
                 <BillingList onEdit={handleEditSale} />
+            )}
+
+            {/* Add Customer Modal */}
+            {showAddCustomerModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+                        <h3 className="text-lg font-bold mb-4">Add New Customer</h3>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Name *</label>
+                                <input
+                                    type="text"
+                                    value={newCustomerName}
+                                    onChange={(e) => setNewCustomerName(e.target.value)}
+                                    className="w-full border rounded p-2"
+                                    placeholder="Customer Name"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Shop Name (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={newCustomerShopName}
+                                    onChange={(e) => setNewCustomerShopName(e.target.value)}
+                                    className="w-full border rounded p-2"
+                                    placeholder="Shop Name"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Phone (Optional)</label>
+                                <input
+                                    type="tel"
+                                    value={newCustomerPhone}
+                                    onChange={(e) => setNewCustomerPhone(e.target.value)}
+                                    className="w-full border rounded p-2"
+                                    placeholder="Phone Number"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Area (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={newCustomerArea}
+                                    onChange={(e) => setNewCustomerArea(e.target.value)}
+                                    className="w-full border rounded p-2"
+                                    placeholder="Area"
+                                />
+                            </div>
+                            <div className="flex gap-2 mt-4">
+                                <button
+                                    onClick={() => {
+                                        setShowAddCustomerModal(false);
+                                        setNewCustomerName('');
+                                        setNewCustomerShopName('');
+                                        setNewCustomerPhone('');
+                                        setNewCustomerArea('');
+                                    }}
+                                    className="flex-1 py-2 border rounded text-gray-600"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleAddNewCustomer}
+                                    className="flex-1 py-2 bg-primary-600 text-white rounded flex items-center justify-center gap-2"
+                                >
+                                    <Save size={16} /> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

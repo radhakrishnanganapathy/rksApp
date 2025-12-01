@@ -598,6 +598,7 @@ app.get('/api/stocks', async (req, res) => {
 
 app.post('/api/stocks', async (req, res) => {
     const { type, name, qty, unit } = req.body; // type: 'product' or 'raw_material'
+    console.log(`[POST /api/stocks] Request received:`, { type, name, qty, unit });
     try {
         // Upsert stock
         const result = await db.query(
@@ -608,8 +609,10 @@ app.post('/api/stocks', async (req, res) => {
              RETURNING *`,
             [type, name, qty, unit || 'kg']
         );
+        console.log(`[POST /api/stocks] Success:`, result.rows[0]);
         res.json(result.rows[0]);
     } catch (err) {
+        console.error(`[POST /api/stocks] Error:`, err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -668,11 +671,11 @@ app.get('/api/employees', async (req, res) => {
 });
 
 app.post('/api/employees', async (req, res) => {
-    const { id, name, salaryType, dailySalary } = req.body;
+    const { id, name, salaryType, dailySalary, mobile, area } = req.body;
     try {
         const result = await db.query(
-            'INSERT INTO employees (id, name, salary_type, daily_salary) VALUES ($1, $2, $3, $4) RETURNING *',
-            [id, name, salaryType, dailySalary]
+            'INSERT INTO employees (id, name, salary_type, daily_salary, mobile, area) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [id, name, salaryType, dailySalary, mobile, area]
         );
         res.json(result.rows[0]);
     } catch (err) {
@@ -682,7 +685,7 @@ app.post('/api/employees', async (req, res) => {
 
 app.put('/api/employees/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, salaryType, dailySalary, active } = req.body;
+    const { name, salaryType, dailySalary, active, mobile, area } = req.body;
     try {
         let query = 'UPDATE employees SET ';
         const params = [];
@@ -701,6 +704,16 @@ app.put('/api/employees/:id', async (req, res) => {
         if (dailySalary !== undefined) {
             query += `daily_salary = $${paramCount}, `;
             params.push(dailySalary);
+            paramCount++;
+        }
+        if (mobile !== undefined) {
+            query += `mobile = $${paramCount}, `;
+            params.push(mobile);
+            paramCount++;
+        }
+        if (area !== undefined) {
+            query += `area = $${paramCount}, `;
+            params.push(area);
             paramCount++;
         }
         if (active !== undefined) {
@@ -744,7 +757,7 @@ app.get('/api/attendance', async (req, res) => {
 });
 
 app.post('/api/attendance', async (req, res) => {
-    const { id, date, employeeId, status } = req.body;
+    const { id, date, employeeId, status, customSalary } = req.body;
     try {
         // Check if exists
         const existing = await db.query('SELECT * FROM attendance WHERE employee_id = $1 AND date = $2', [employeeId, date]);
@@ -752,13 +765,13 @@ app.post('/api/attendance', async (req, res) => {
         let result;
         if (existing.rows.length > 0) {
             result = await db.query(
-                'UPDATE attendance SET status = $1 WHERE employee_id = $2 AND date = $3 RETURNING *',
-                [status, employeeId, date]
+                'UPDATE attendance SET status = $1, custom_salary = $2 WHERE employee_id = $3 AND date = $4 RETURNING *',
+                [status, customSalary || null, employeeId, date]
             );
         } else {
             result = await db.query(
-                'INSERT INTO attendance (id, date, employee_id, status) VALUES ($1, $2, $3, $4) RETURNING *',
-                [id, date, employeeId, status]
+                'INSERT INTO attendance (id, date, employee_id, status, custom_salary) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+                [id, date, employeeId, status, customSalary || null]
             );
         }
         res.json(result.rows[0]);
@@ -1020,8 +1033,11 @@ app.delete('/api/customers/:id', async (req, res) => {
 
 // Start server after initializing database
 initializeTables().then(() => {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
+
+    // Keep process alive
+    setInterval(() => { }, 10000);
 });
 

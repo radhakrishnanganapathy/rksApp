@@ -12,7 +12,10 @@ const Customers = ({ onNavigateBack }) => {
     const [area, setArea] = useState('');
 
     const handleAddCustomer = () => {
-        if (!name || !phone || !area) return;
+        if (!name) {
+            alert("Customer Name is required!");
+            return;
+        }
 
         if (editingCustomer) {
             updateCustomer(editingCustomer.id, { name, shopName, phone, area });
