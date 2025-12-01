@@ -672,13 +672,16 @@ app.get('/api/employees', async (req, res) => {
 
 app.post('/api/employees', async (req, res) => {
     const { id, name, salaryType, dailySalary, mobile, area } = req.body;
+    console.log('[POST /api/employees] Request:', { id, name, salaryType, dailySalary, mobile, area });
     try {
         const result = await db.query(
             'INSERT INTO employees (id, name, salary_type, daily_salary, mobile, area) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
             [id, name, salaryType, dailySalary, mobile, area]
         );
+        console.log('[POST /api/employees] Success:', result.rows[0]);
         res.json(result.rows[0]);
     } catch (err) {
+        console.error('[POST /api/employees] Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
