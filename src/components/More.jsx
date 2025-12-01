@@ -1,5 +1,5 @@
 import React from 'react';
-import { Factory, Wallet, Users, UserCircle, BarChart3, PieChart, ShoppingCart, GitCompare, ClipboardList, DollarSign, Tags } from 'lucide-react';
+import { Factory, Wallet, Users, UserCircle, BarChart3, PieChart, ShoppingCart, GitCompare, ClipboardList, DollarSign, Tags, Database } from 'lucide-react';
 
 const More = ({ onNavigate }) => {
     const menuItems = [
@@ -14,6 +14,7 @@ const More = ({ onNavigate }) => {
         { id: 'orders', label: 'Orders', icon: ClipboardList, color: 'text-orange-600', bg: 'bg-orange-50' },
         { id: 'balance', label: 'Balance Amount', icon: DollarSign, color: 'text-rose-600', bg: 'bg-rose-50' },
         { id: 'raw-material-prices', label: 'Price List', icon: Tags, color: 'text-teal-600', bg: 'bg-teal-50' },
+        { id: 'data-management', label: 'Import / Export', icon: Database, color: 'text-slate-600', bg: 'bg-slate-50' },
     ];
 
     return (

@@ -16,6 +16,7 @@ import LastBuy from './components/LastBuy';
 import Compare from './components/Compare';
 import Orders from './components/Orders';
 import RawMaterialPrices from './components/RawMaterialPrices';
+import DataManagement from './components/DataManagement';
 
 import { useData } from './context/DataContext';
 
@@ -55,6 +56,8 @@ function App() {
         return <BalanceAmount onNavigateBack={() => setActiveTab('more')} />;
       case 'raw-material-prices':
         return <RawMaterialPrices onNavigateBack={() => setActiveTab('more')} />;
+      case 'data-management':
+        return <DataManagement onNavigateBack={() => setActiveTab('more')} />;
       default:
         return <Dashboard />;
     }

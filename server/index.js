@@ -1128,8 +1128,64 @@ app.delete('/api/customers/:id', async (req, res) => {
 });
 
 // Start server after initializing database
+// --- Generic Data Import ---
+app.post('/api/import', async (req, res) => {
+    const { table, data } = req.body;
+
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        return res.status(400).json({ error: 'No data provided' });
+    }
+
+    const allowedTables = [
+        'sales', 'production', 'expenses', 'employees', 'customers',
+        'attendance', 'orders', 'raw_material_usage', 'raw_material_purchases',
+        'raw_material_prices'
+    ];
+
+    if (!allowedTables.includes(table)) {
+        return res.status(400).json({ error: 'Invalid table name' });
+    }
+
+    const client = await db.connect();
+    try {
+        await client.query('BEGIN');
+
+        let insertedCount = 0;
+        for (const row of data) {
+            // Filter out empty keys or keys not in the row
+            const keys = Object.keys(row).filter(k => row[k] !== undefined && row[k] !== '');
+            if (keys.length === 0) continue;
+
+            const values = keys.map(k => row[k]);
+            const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
+            const columns = keys.map(k => `"${k}"`).join(', '); // Quote columns for safety
+
+            // Construct query: INSERT INTO table (col1, col2) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING
+            const query = `
+                INSERT INTO ${table} (${columns}) 
+                VALUES (${placeholders}) 
+                ON CONFLICT (id) DO NOTHING
+            `;
+
+            await client.query(query, values);
+            insertedCount++;
+        }
+
+        await client.query('COMMIT');
+        console.log(`[Import] Successfully processed ${insertedCount} records for ${table}`);
+        res.json({ message: `Successfully imported ${insertedCount} records` });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('[Import] Error:', err);
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+// Start server after initializing database
 initializeTables().then(() => {
-    const server = app.listen(PORT, () => {
+    app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
 
