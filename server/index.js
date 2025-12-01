@@ -686,49 +686,58 @@ app.post('/api/employees', async (req, res) => {
 app.put('/api/employees/:id', async (req, res) => {
     const { id } = req.params;
     const { name, salaryType, dailySalary, active, mobile, area } = req.body;
+    console.log('[PUT /api/employees/:id] Request:', { id, name, salaryType, dailySalary, active, mobile, area });
     try {
         let query = 'UPDATE employees SET ';
         const params = [];
         let paramCount = 1;
 
-        if (name !== undefined) {
+        // Only update fields that have meaningful values
+        if (name !== undefined && name !== null && name !== '') {
             query += `name = $${paramCount}, `;
             params.push(name);
             paramCount++;
         }
-        if (salaryType !== undefined) {
+        if (salaryType !== undefined && salaryType !== null) {
             query += `salary_type = $${paramCount}, `;
             params.push(salaryType);
             paramCount++;
         }
-        if (dailySalary !== undefined) {
+        if (dailySalary !== undefined && dailySalary !== null) {
             query += `daily_salary = $${paramCount}, `;
             params.push(dailySalary);
             paramCount++;
         }
-        if (mobile !== undefined) {
+        if (mobile !== undefined && mobile !== null) {
             query += `mobile = $${paramCount}, `;
             params.push(mobile);
             paramCount++;
         }
-        if (area !== undefined) {
+        if (area !== undefined && area !== null) {
             query += `area = $${paramCount}, `;
             params.push(area);
             paramCount++;
         }
-        if (active !== undefined) {
+        if (active !== undefined && active !== null) {
             query += `active = $${paramCount}, `;
             params.push(active);
             paramCount++;
+        }
+
+        if (paramCount === 1) {
+            return res.status(400).json({ error: 'No valid fields to update' });
         }
 
         query = query.slice(0, -2);
         query += ` WHERE id = $${paramCount} RETURNING *`;
         params.push(id);
 
+        console.log('[PUT /api/employees/:id] Query:', query, 'Params:', params);
         const result = await db.query(query, params);
+        console.log('[PUT /api/employees/:id] Success:', result.rows[0]);
         res.json(result.rows[0]);
     } catch (err) {
+        console.error('[PUT /api/employees/:id] Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -758,24 +767,30 @@ app.get('/api/attendance', async (req, res) => {
 
 app.post('/api/attendance', async (req, res) => {
     const { id, date, employeeId, status, customSalary } = req.body;
+    console.log('[POST /api/attendance] Request:', { id, date, employeeId, status, customSalary });
     try {
         // Check if exists
         const existing = await db.query('SELECT * FROM attendance WHERE employee_id = $1 AND date = $2', [employeeId, date]);
+        console.log('[POST /api/attendance] Existing records:', existing.rows.length);
 
         let result;
         if (existing.rows.length > 0) {
+            console.log('[POST /api/attendance] Updating existing attendance');
             result = await db.query(
                 'UPDATE attendance SET status = $1, custom_salary = $2 WHERE employee_id = $3 AND date = $4 RETURNING *',
                 [status, customSalary || null, employeeId, date]
             );
         } else {
+            console.log('[POST /api/attendance] Inserting new attendance');
             result = await db.query(
                 'INSERT INTO attendance (id, date, employee_id, status, custom_salary) VALUES ($1, $2, $3, $4, $5) RETURNING *',
                 [id, date, employeeId, status, customSalary || null]
             );
         }
+        console.log('[POST /api/attendance] Success:', result.rows[0]);
         res.json(result.rows[0]);
     } catch (err) {
+        console.error('[POST /api/attendance] Error:', err);
         res.status(500).json({ error: err.message });
     }
 });

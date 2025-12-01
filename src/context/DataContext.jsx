@@ -46,7 +46,8 @@ export const DataProvider = ({ children }) => {
 
     const mapAttendance = (a) => ({
         ...a,
-        employeeId: a.employee_id
+        employeeId: a.employee_id,
+        customSalary: a.custom_salary ? Number(a.custom_salary) : null
     });
 
     const mapProduction = (p) => ({
@@ -376,17 +377,30 @@ export const DataProvider = ({ children }) => {
 
     const markAttendance = async (employeeId, date, status, customSalary = null) => {
         try {
+            console.log('Marking attendance:', { employeeId, date, status, customSalary });
             const res = await fetch(`${API_URL}/attendance`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: Date.now(), employeeId, date, status, customSalary })
             });
+
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error('Failed to mark attendance:', errorText);
+                throw new Error(`Failed to mark attendance: ${res.statusText}`);
+            }
+
             // Refetch attendance
             const attendanceRes = await fetch(`${API_URL}/attendance`);
+            if (!attendanceRes.ok) {
+                throw new Error('Failed to fetch attendance');
+            }
             const attendanceData = await attendanceRes.json();
             setAttendance(attendanceData.map(mapAttendance));
+            console.log('Attendance marked successfully');
         } catch (err) {
             console.error("Error marking attendance:", err);
+            alert(`Error marking attendance: ${err.message}`);
         }
     };
 
@@ -607,7 +621,27 @@ export const DataProvider = ({ children }) => {
         }
     };
 
-    const deleteEmployee = (id) => deleteItem('employees', id, setEmployees, employees);
+    const deleteEmployee = async (id) => {
+        try {
+            const res = await fetch(`${API_URL}/employees/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error('Failed to delete employee:', errorText);
+                throw new Error(`Failed to delete employee: ${res.statusText}`);
+            }
+            // Refetch all employees to ensure consistency
+            const employeesRes = await fetch(`${API_URL}/employees`);
+            if (!employeesRes.ok) {
+                throw new Error('Failed to fetch employees');
+            }
+            const employeesData = await employeesRes.json();
+            setEmployees(employeesData.map(mapEmployee));
+            console.log('Employee deleted and list refreshed');
+        } catch (err) {
+            console.error('Error deleting employee:', err);
+            throw err;
+        }
+    };
     const updateEmployee = (id, data) => updateItem('employees', id, data, setEmployees, employees, mapEmployee);
 
     const deleteCustomer = (id) => deleteItem('customers', id, setCustomers, customers);

@@ -38,18 +38,22 @@ const Employees = ({ onNavigateBack }) => {
         }
 
         if (editingEmployee) {
-            updateEmployee(editingEmployee.id, {
-                name: empName,
-                mobile: empMobile,
-                area: empArea,
-                dailySalary: Number(empDailySalary) || 0
-            });
+            // Build update object with only fields that have values
+            const updateData = {
+                name: empName
+            };
+
+            if (empMobile) updateData.mobile = empMobile;
+            if (empArea) updateData.area = empArea;
+            if (empDailySalary) updateData.dailySalary = Number(empDailySalary);
+
+            updateEmployee(editingEmployee.id, updateData);
             alert('Employee updated successfully!');
         } else {
             addEmployee({
                 name: empName,
-                mobile: empMobile,
-                area: empArea,
+                mobile: empMobile || null,
+                area: empArea || null,
                 dailySalary: Number(empDailySalary) || 0,
                 salaryType: 'daily'
             });
@@ -77,10 +81,15 @@ const Employees = ({ onNavigateBack }) => {
         setShowEmployeeModal(true);
     };
 
-    const handleDeleteEmployee = (emp) => {
+    const handleDeleteEmployee = async (emp) => {
         if (window.confirm(`Are you sure you want to delete ${emp.name}?`)) {
-            deleteEmployee(emp.id);
-            alert('Employee deleted successfully!');
+            try {
+                await deleteEmployee(emp.id);
+                alert('Employee deleted successfully!');
+            } catch (error) {
+                console.error('Error deleting employee:', error);
+                alert(`Failed to delete employee: ${error.message}`);
+            }
         }
     };
 
