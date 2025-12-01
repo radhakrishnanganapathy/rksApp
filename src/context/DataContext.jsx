@@ -374,12 +374,12 @@ export const DataProvider = ({ children }) => {
         }
     };
 
-    const markAttendance = async (employeeId, date, status) => {
+    const markAttendance = async (employeeId, date, status, customSalary = null) => {
         try {
             const res = await fetch(`${API_URL}/attendance`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: Date.now(), employeeId, date, status })
+                body: JSON.stringify({ id: Date.now(), employeeId, date, status, customSalary })
             });
             // Refetch attendance
             const attendanceRes = await fetch(`${API_URL}/attendance`);

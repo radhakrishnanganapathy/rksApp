@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { Save, UserPlus, Check, X, Calendar, DollarSign, ArrowLeft, Phone, MapPin, Edit2, Eye, Users } from 'lucide-react';
+import { Save, UserPlus, Check, X, Calendar, DollarSign, ArrowLeft, Phone, MapPin, Edit2, Eye, Users, Trash2 } from 'lucide-react';
 import { formatCurrency, filterByMonthYear } from '../utils';
 
 const Employees = ({ onNavigateBack }) => {
-    const { employees, attendance, addEmployee, updateEmployee, markAttendance } = useData();
+    const { employees, attendance, addEmployee, updateEmployee, deleteEmployee, markAttendance } = useData();
 
     // Tab state
     const [activeTab, setActiveTab] = useState('attendance'); // 'attendance', 'summary', 'manage'
@@ -75,6 +75,13 @@ const Employees = ({ onNavigateBack }) => {
         setEmpArea(emp.area || '');
         setEmpDailySalary(emp.dailySalary || '');
         setShowEmployeeModal(true);
+    };
+
+    const handleDeleteEmployee = (emp) => {
+        if (window.confirm(`Are you sure you want to delete ${emp.name}?`)) {
+            deleteEmployee(emp.id);
+            alert('Employee deleted successfully!');
+        }
     };
 
     const getAttendanceForDate = (employeeId, date) => {
@@ -431,6 +438,13 @@ const Employees = ({ onNavigateBack }) => {
                                                 title="Edit Employee"
                                             >
                                                 <Edit2 size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteEmployee(emp)}
+                                                className="p-2 text-red-600 hover:bg-red-50 rounded"
+                                                title="Delete Employee"
+                                            >
+                                                <Trash2 size={18} />
                                             </button>
                                         </div>
                                     </div>
