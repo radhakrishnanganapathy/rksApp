@@ -15,7 +15,7 @@ import LoadingScreen from './components/LoadingScreen';
 import LastBuy from './components/LastBuy';
 import Compare from './components/Compare';
 import Orders from './components/Orders';
-import BalanceAmount from './components/BalanceAmount';
+import RawMaterialPrices from './components/RawMaterialPrices';
 
 import { useData } from './context/DataContext';
 
@@ -53,6 +53,8 @@ function App() {
         return <Orders onNavigateBack={() => setActiveTab('more')} />;
       case 'balance':
         return <BalanceAmount onNavigateBack={() => setActiveTab('more')} />;
+      case 'raw-material-prices':
+        return <RawMaterialPrices onNavigateBack={() => setActiveTab('more')} />;
       default:
         return <Dashboard />;
     }

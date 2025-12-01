@@ -18,6 +18,7 @@ export const DataProvider = ({ children }) => {
     const [orders, setOrders] = useState([]);
     const [rawMaterialPurchases, setRawMaterialPurchases] = useState([]);
     const [rawMaterialUsage, setRawMaterialUsage] = useState([]);
+    const [rawMaterialPrices, setRawMaterialPrices] = useState([]);
     const [items] = useState(ITEMS);
     const [loading, setLoading] = useState(true);
 
@@ -75,13 +76,18 @@ export const DataProvider = ({ children }) => {
         materialName: p.material_name
     });
 
+    const mapRawMaterialPrice = (p) => ({
+        ...p,
+        pricePerUnit: Number(p.price_per_unit)
+    });
+
     // Fetch Initial Data
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const endpoints = [
                     'sales', 'production', 'expenses', 'stocks',
-                    'customers', 'employees', 'attendance', 'orders', 'raw-material-purchases', 'raw-material-usage'
+                    'customers', 'employees', 'attendance', 'orders', 'raw-material-purchases', 'raw-material-usage', 'raw-material-prices'
                 ];
 
                 const responses = await Promise.all(
@@ -107,6 +113,7 @@ export const DataProvider = ({ children }) => {
                 setOrders(data[7]?.map(mapOrder) || []);
                 setRawMaterialPurchases(data[8]?.map(mapPurchase) || []);
                 setRawMaterialUsage(data[9]?.map(mapUsage) || []);
+                setRawMaterialPrices(data[10]?.map(mapRawMaterialPrice) || []);
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
@@ -582,6 +589,22 @@ export const DataProvider = ({ children }) => {
         }
     };
 
+    const addItem = async (endpoint, data, stateSetter, currentState, mapper) => {
+        try {
+            const res = await fetch(`${API_URL}/${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const newItem = await res.json();
+            const mappedItem = mapper ? mapper(newItem) : newItem;
+            stateSetter([mappedItem, ...currentState]); // Assuming new items are added to the beginning
+        } catch (err) {
+            console.error(`Error adding to ${endpoint}:`, err);
+            throw err;
+        }
+    };
+
     // Specific Delete/Update Functions
     const deleteSale = (id) => deleteItem('sales', id, setSales, sales);
     const updateSale = (id, data) => updateItem('sales', id, data, setSales, sales, mapSale);
@@ -651,6 +674,9 @@ export const DataProvider = ({ children }) => {
 
     const deleteRawMaterialPurchase = (id) => deleteItem('raw-material-purchases', id, setRawMaterialPurchases, rawMaterialPurchases);
     const updateRawMaterialPurchase = (id, data) => updateItem('raw-material-purchases', id, data, setRawMaterialPurchases, rawMaterialPurchases, mapPurchase);
+    const addRawMaterialPrice = (data) => addItem('raw-material-prices', data, setRawMaterialPrices, rawMaterialPrices, mapRawMaterialPrice);
+    const updateRawMaterialPrice = (id, data) => updateItem('raw-material-prices', id, data, setRawMaterialPrices, rawMaterialPrices, mapRawMaterialPrice);
+    const deleteRawMaterialPrice = (id) => deleteItem('raw-material-prices', id, setRawMaterialPrices, rawMaterialPrices);
 
 
     return (
@@ -665,6 +691,7 @@ export const DataProvider = ({ children }) => {
             orders, addOrder, updateOrderStatus, convertOrderToSale, clearOrder, markOrderAsPaid, updateOrderAmountReceived, deleteOrder, updateOrder,
             rawMaterialPurchases, addRawMaterialPurchase, deleteRawMaterialPurchase, updateRawMaterialPurchase,
             rawMaterialUsage, addRawMaterialUsage, deleteRawMaterialUsage, updateRawMaterialUsage,
+            rawMaterialPrices, addRawMaterialPrice, updateRawMaterialPrice, deleteRawMaterialPrice,
             items,
             loading
         }}>

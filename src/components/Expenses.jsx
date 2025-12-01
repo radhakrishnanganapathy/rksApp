@@ -30,7 +30,8 @@ const Expenses = ({ onNavigateBack }) => {
     const {
         expenses, addExpense, updateExpense, deleteExpense,
         stocks, updateStock, deleteStock,
-        rawMaterialUsage, addRawMaterialUsage, updateRawMaterialUsage, deleteRawMaterialUsage
+        rawMaterialUsage, addRawMaterialUsage, updateRawMaterialUsage, deleteRawMaterialUsage,
+        rawMaterialPrices
     } = useData();
 
     const [activeTab, setActiveTab] = useState('expenses'); // 'expenses' | 'rawstock' | 'usage' | 'list'
@@ -73,43 +74,20 @@ const Expenses = ({ onNavigateBack }) => {
     const [filterCategory, setFilterCategory] = useState('All');
 
     // --- Helper Functions ---
-    const calculateAveragePrice = (materialName) => {
+    const getMaterialPrice = (materialName) => {
         if (!materialName) return 0;
-
-        // Find all purchases for this material AND unit
-        // We must filter by unit to avoid mixing different units (e.g. kg vs g)
-        const purchases = expenses.filter(e =>
-            e.category === 'Raw Material' &&
-            e.materialName === materialName &&
-            e.unit === usageUnit &&
-            e.quantity > 0 &&
-            e.amount > 0
-        );
-
-        if (purchases.length === 0) return 0;
-
-        // Calculate total cost and total quantity to get weighted average
-        // Explicitly cast to Number to avoid any string concatenation issues
-        const totalCost = purchases.reduce((sum, p) => sum + Number(p.amount), 0);
-        const totalQty = purchases.reduce((sum, p) => sum + Number(p.quantity), 0);
-
-        // DEBUG: Remove this after fixing
-        console.log(`Found ${purchases.length} records for ${materialName} (${usageUnit})`);
-        console.log('Records:', purchases.map(p => `${p.quantity} @ ${p.amount}`).join(', '));
-        console.log(`Total Cost: ${totalCost}, Total Qty: ${totalQty}, Avg: ${totalCost / totalQty}`);
-        alert(`Debug: Found ${purchases.length} records.\nTotal Cost: ${totalCost}\nTotal Qty: ${totalQty}\nAvg: ${totalCost / totalQty}`);
-
-        return totalQty > 0 ? totalCost / totalQty : 0;
+        const priceItem = rawMaterialPrices.find(p => p.name === materialName);
+        return priceItem ? priceItem.pricePerUnit : 0;
     };
 
     // Update cost when quantity or material changes (if auto)
     React.useEffect(() => {
         if (usageCostType === 'auto' && usageMaterialName && usageQuantity) {
-            const avgPrice = calculateAveragePrice(usageMaterialName);
-            const calculatedCost = avgPrice * Number(usageQuantity);
+            const price = getMaterialPrice(usageMaterialName);
+            const calculatedCost = price * Number(usageQuantity);
             setUsageCost(calculatedCost.toFixed(2));
         }
-    }, [usageMaterialName, usageQuantity, usageCostType, expenses]);
+    }, [usageMaterialName, usageQuantity, usageCostType, rawMaterialPrices]);
 
     const resetExpForm = () => {
         setExpId(null);
@@ -762,7 +740,7 @@ const Expenses = ({ onNavigateBack }) => {
                                 />
                                 {usageCostType === 'auto' && usageMaterialName && (
                                     <p className="text-[10px] text-purple-600">
-                                        * Calculated based on average purchase price of {usageMaterialName}
+                                        * Calculated based on Price List ({formatCurrency(getMaterialPrice(usageMaterialName))}/{usageUnit})
                                     </p>
                                 )}
                             </div>

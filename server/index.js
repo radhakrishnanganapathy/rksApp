@@ -165,6 +165,16 @@ const initializeTables = async () => {
             );
         `);
 
+        // Raw Material Prices Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS raw_material_prices (
+                id BIGINT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                unit TEXT NOT NULL,
+                price_per_unit NUMERIC NOT NULL
+            );
+        `);
+
         // Self-healing: Check if cost column exists and add it if missing
         try {
             const checkColumn = await db.query(`
@@ -900,6 +910,56 @@ app.delete('/api/raw-material-purchases/:id', async (req, res) => {
             return res.status(404).json({ error: 'Raw material purchase not found' });
         }
         res.json({ message: 'Raw material purchase deleted successfully', purchase: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Raw Material Prices ---
+app.get('/api/raw-material-prices', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM raw_material_prices ORDER BY name ASC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/raw-material-prices', async (req, res) => {
+    const { id, name, unit, pricePerUnit } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO raw_material_prices (id, name, unit, price_per_unit) VALUES ($1, $2, $3, $4) RETURNING *',
+            [id, name, unit, pricePerUnit]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/raw-material-prices/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, unit, pricePerUnit } = req.body;
+    try {
+        const result = await db.query(
+            'UPDATE raw_material_prices SET name = $1, unit = $2, price_per_unit = $3 WHERE id = $4 RETURNING *',
+            [name, unit, pricePerUnit, id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/raw-material-prices/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM raw_material_prices WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Price item not found' });
+        }
+        res.json({ message: 'Price item deleted successfully', item: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
