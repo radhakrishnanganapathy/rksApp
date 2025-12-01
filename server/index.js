@@ -184,6 +184,24 @@ const initializeTables = async () => {
             console.error('Error checking/adding cost column:', err.message);
         }
 
+
+        // Migration: Add mobile, area columns to employees and custom_salary to attendance
+        try {
+            console.log('Checking employee module columns...');
+            await db.query(`
+                ALTER TABLE employees 
+                ADD COLUMN IF NOT EXISTS mobile TEXT,
+                ADD COLUMN IF NOT EXISTS area TEXT;
+            `);
+            await db.query(`
+                ALTER TABLE attendance 
+                ADD COLUMN IF NOT EXISTS custom_salary NUMERIC;
+            `);
+            console.log('✅ Employee module columns checked/added.');
+        } catch (err) {
+            console.error('Error checking employee columns:', err.message);
+        }
+
         console.log('Database tables initialized successfully!');
     } catch (err) {
         console.error('Error initializing database tables:', err);
