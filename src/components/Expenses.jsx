@@ -3,28 +3,7 @@ import { useData } from '../context/DataContext';
 import { Save, Wallet, Package, TrendingDown, List, Trash2, Edit, X, ArrowLeft } from 'lucide-react';
 import { formatCurrency, filterByMonthYear } from '../utils';
 
-// Predefined Raw Materials in Tamil
-const PREDEFINED_RAW_MATERIALS = [
-    'எண்ணெய்',           // Oil
-    'எரிவாயு',          // Gas
-    'அரிசி',            // Rice
-    'அரிசி மாவு',       // Rice flour
-    'மிளகாய் தூள்',     // Chili powder
-    'பொட்டு கடலை',      // Roasted gram
-    'உளுந்து',          // Black gram
-    'முட்டை',           // Egg
-    'மைதா மாவு',        // Maida flour
-    'மிளகு',            // Pepper
-    'சோம்பு',           // Fennel
-    'சீரகம்',           // Cumin
-    'கருவேப்பிலை',      // Curry leaves
-    'மல்லித்தை (மல்லி)', // Coriander
-    'வெல்லம்',          // Jaggery
-    'ரவை',             // Rava
-    'பாக்கிங் கவர்',    // Packing cover
-    'பாக்கிங் பாக்ஸ்',  // Packing box
-    'சுக்கு'            // Dry ginger
-];
+
 
 const Expenses = ({ onNavigateBack }) => {
     const {
@@ -372,15 +351,20 @@ const Expenses = ({ onNavigateBack }) => {
                                         onChange={(e) => {
                                             const val = e.target.value;
                                             setExpMaterialName(val);
-                                            const item = stocks.rawMaterials.find(s => s.name === val);
-                                            if (item) setExpUnit(item.unit);
+                                            // Try to find unit from Price List first, then Stock
+                                            const priceItem = rawMaterialPrices.find(p => p.name === val);
+                                            if (priceItem) {
+                                                setExpUnit(priceItem.unit);
+                                            } else {
+                                                const stockItem = stocks.rawMaterials.find(s => s.name === val);
+                                                if (stockItem) setExpUnit(stockItem.unit);
+                                            }
                                         }}
                                         className="w-full border rounded p-2 text-sm"
                                     >
                                         <option value="">Select Material</option>
-                                        {/* Predefined Tamil Materials */}
-                                        {PREDEFINED_RAW_MATERIALS.map((material, idx) => (
-                                            <option key={`predefined-${idx}`} value={material}>{material}</option>
+                                        {rawMaterialPrices.map((item) => (
+                                            <option key={item.id} value={item.name}>{item.name}</option>
                                         ))}
                                         <option value="CUSTOM">➕ Add Custom Material</option>
                                     </select>
@@ -458,16 +442,20 @@ const Expenses = ({ onNavigateBack }) => {
                                     onChange={(e) => {
                                         const val = e.target.value;
                                         setAddStockMaterialName(val);
-                                        // Auto-fill unit if material already exists
-                                        const item = stocks.rawMaterials.find(s => s.name === val);
-                                        if (item) setAddStockUnit(item.unit);
+                                        // Auto-fill unit from Price List
+                                        const priceItem = rawMaterialPrices.find(p => p.name === val);
+                                        if (priceItem) {
+                                            setAddStockUnit(priceItem.unit);
+                                        } else {
+                                            const stockItem = stocks.rawMaterials.find(s => s.name === val);
+                                            if (stockItem) setAddStockUnit(stockItem.unit);
+                                        }
                                     }}
                                     className="w-full border rounded p-2"
                                 >
                                     <option value="">Select Material</option>
-                                    {/* Predefined Tamil Materials */}
-                                    {PREDEFINED_RAW_MATERIALS.map((material, idx) => (
-                                        <option key={`predefined-${idx}`} value={material}>{material}</option>
+                                    {rawMaterialPrices.map((item) => (
+                                        <option key={item.id} value={item.name}>{item.name}</option>
                                     ))}
                                     <option value="CUSTOM">➕ Add Custom Material</option>
                                 </select>
@@ -683,13 +671,20 @@ const Expenses = ({ onNavigateBack }) => {
                                     value={usageMaterialName}
                                     onChange={(e) => {
                                         setUsageMaterialName(e.target.value);
-                                        const item = stocks.rawMaterials.find(s => s.name === e.target.value);
-                                        if (item) setUsageUnit(item.unit);
+                                        const priceItem = rawMaterialPrices.find(p => p.name === e.target.value);
+                                        if (priceItem) {
+                                            setUsageUnit(priceItem.unit);
+                                        } else {
+                                            const stockItem = stocks.rawMaterials.find(s => s.name === e.target.value);
+                                            if (stockItem) setUsageUnit(stockItem.unit);
+                                        }
                                     }}
                                     className="w-full border rounded p-2"
                                 >
                                     <option value="">Select Material</option>
-                                    {stocks.rawMaterials.map((s, i) => <option key={i} value={s.name}>{s.name} ({s.unit})</option>)}
+                                    {rawMaterialPrices.map((item) => (
+                                        <option key={item.id} value={item.name}>{item.name} ({item.unit})</option>
+                                    ))}
                                 </select>
                             </div>
 

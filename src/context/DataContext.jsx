@@ -606,14 +606,126 @@ export const DataProvider = ({ children }) => {
     };
 
     // Specific Delete/Update Functions
-    const deleteSale = (id) => deleteItem('sales', id, setSales, sales);
-    const updateSale = (id, data) => updateItem('sales', id, data, setSales, sales, mapSale);
+    const deleteSale = async (id) => {
+        try {
+            const saleToDelete = sales.find(s => s.id === id);
+            if (saleToDelete) {
+                // Revert stock (Add back)
+                for (const item of saleToDelete.items) {
+                    await fetch(`${API_URL}/stocks`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ type: 'product', name: item.name, qty: Number(item.qty) })
+                    });
+                }
+            }
+            await deleteItem('sales', id, setSales, sales);
+
+            // Refetch stocks
+            const stocksRes = await fetch(`${API_URL}/stocks`);
+            setStocks(await stocksRes.json());
+        } catch (err) {
+            console.error("Error deleting sale:", err);
+        }
+    };
+
+    const updateSale = async (id, updatedData) => {
+        try {
+            const oldSale = sales.find(s => s.id === id);
+
+            // 1. Revert old stock (Add back)
+            if (oldSale) {
+                for (const item of oldSale.items) {
+                    await fetch(`${API_URL}/stocks`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ type: 'product', name: item.name, qty: Number(item.qty) })
+                    });
+                }
+            }
+
+            // 2. Update Sale
+            await updateItem('sales', id, updatedData, setSales, sales, mapSale);
+
+            // 3. Apply new stock (Deduct)
+            for (const item of updatedData.items) {
+                await fetch(`${API_URL}/stocks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'product', name: item.name, qty: -Number(item.qty) })
+                });
+            }
+
+            // 4. Refetch stocks
+            const stocksRes = await fetch(`${API_URL}/stocks`);
+            setStocks(await stocksRes.json());
+        } catch (err) {
+            console.error("Error updating sale:", err);
+        }
+    };
 
     const deleteOrder = (id) => deleteItem('orders', id, setOrders, orders);
     const updateOrder = (id, data) => updateItem('orders', id, data, setOrders, orders, mapOrder);
 
-    const deleteProduction = (id) => deleteItem('production', id, setProduction, production);
-    const updateProduction = (id, data) => updateItem('production', id, data, setProduction, production, mapProduction);
+    const deleteProduction = async (id) => {
+        try {
+            const prodToDelete = production.find(p => p.id === id);
+            if (prodToDelete) {
+                // Revert stock (Decrease, because production added stock)
+                // Use packedQty if available, otherwise raw qty? 
+                // Usually production adds 'item' stock. 
+                // Let's assume 'item' is the product name and 'packedQty' is the final yield if present, else 'qty'.
+                // Ideally, we should use the same logic as addProduction.
+                // In addProduction: type: 'product', name: prod.item, qty: prod.qty
+                // Wait, addProduction uses prod.qty. Let's stick to that for consistency unless the user specified otherwise.
+                // Actually, looking at addProduction implementation above (lines 167-172), it uses prod.qty.
+
+                await fetch(`${API_URL}/stocks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'product', name: prodToDelete.item, qty: -Number(prodToDelete.qty) })
+                });
+            }
+            await deleteItem('production', id, setProduction, production);
+
+            // Refetch stocks
+            const stocksRes = await fetch(`${API_URL}/stocks`);
+            setStocks(await stocksRes.json());
+        } catch (err) {
+            console.error("Error deleting production:", err);
+        }
+    };
+
+    const updateProduction = async (id, updatedData) => {
+        try {
+            const oldProd = production.find(p => p.id === id);
+
+            // 1. Revert old stock (Decrease)
+            if (oldProd) {
+                await fetch(`${API_URL}/stocks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'product', name: oldProd.item, qty: -Number(oldProd.qty) })
+                });
+            }
+
+            // 2. Update Production
+            await updateItem('production', id, updatedData, setProduction, production, mapProduction);
+
+            // 3. Apply new stock (Increase)
+            await fetch(`${API_URL}/stocks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'product', name: updatedData.item, qty: Number(updatedData.qty) })
+            });
+
+            // 4. Refetch stocks
+            const stocksRes = await fetch(`${API_URL}/stocks`);
+            setStocks(await stocksRes.json());
+        } catch (err) {
+            console.error("Error updating production:", err);
+        }
+    };
 
 
 

@@ -17,6 +17,7 @@ import Compare from './components/Compare';
 import Orders from './components/Orders';
 import RawMaterialPrices from './components/RawMaterialPrices';
 import DataManagement from './components/DataManagement';
+import BalanceAmount from './components/BalanceAmount';
 
 import { useData } from './context/DataContext';
 

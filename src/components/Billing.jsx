@@ -53,12 +53,39 @@ const Billing = () => {
         if (!currentItem || Number(currentQty) <= 0 || Number(currentPrice) <= 0) return;
 
         // Check stock
+        // Check stock
         const stockItem = stocks.products.find(p => p.name === currentItem);
-        // If editing, we need to account for the qty we already have in the bill
-        const existingQtyInBill = editingItemIndex !== null ? billItems[editingItemIndex].qty : 0;
 
-        if (stockItem && (stockItem.qty + existingQtyInBill) < Number(currentQty)) {
-            alert(`Insufficient stock! Only ${stockItem.qty} available.`);
+        // Calculate how much of this item is ALREADY in the current bill state (excluding the one we are editing)
+        let qtyInCurrentBillState = 0;
+        billItems.forEach((item, idx) => {
+            if (item.name === currentItem && idx !== editingItemIndex) {
+                qtyInCurrentBillState += Number(item.qty);
+            }
+        });
+
+        // Calculate how much of this item was in the ORIGINAL saved sale (if editing a sale)
+        // This quantity is "owned" by this bill, so it counts as available stock for this edit.
+        let qtyInOriginalSale = 0;
+        if (editingSaleId) {
+            const originalSale = sales.find(s => s.id === editingSaleId);
+            if (originalSale) {
+                qtyInOriginalSale = originalSale.items
+                    .filter(i => i.name === currentItem)
+                    .reduce((sum, i) => sum + Number(i.qty), 0);
+            }
+        }
+
+        const currentStock = stockItem ? stockItem.qty : 0;
+
+        // Effective Available Stock = Current DB Stock + What we "own" from the original sale
+        const effectiveStock = currentStock + qtyInOriginalSale;
+
+        // Required Stock = What we want to add (currentQty) + What else is in the bill state
+        const requiredStock = Number(currentQty) + qtyInCurrentBillState;
+
+        if (effectiveStock < requiredStock) {
+            alert(`Insufficient stock! Only ${effectiveStock} available.`);
             return;
         }
 
