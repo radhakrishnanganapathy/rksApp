@@ -50,6 +50,8 @@ const Expenses = ({ onNavigateBack }) => {
     // --- Filters ---
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [filterType, setFilterType] = useState('month'); // 'month' or 'date'
     const [filterCategory, setFilterCategory] = useState('All');
 
     // --- Helper Functions ---
@@ -250,17 +252,32 @@ const Expenses = ({ onNavigateBack }) => {
 
     // --- Derived Data ---
     const filteredExpenses = useMemo(() => {
-        let data = filterByMonthYear(expenses, selectedMonth, selectedYear);
+        let data = expenses;
+
+        if (filterType === 'date') {
+            data = data.filter(e => {
+                const eDate = new Date(e.date).toISOString().split('T')[0];
+                return eDate === selectedDate;
+            });
+        } else {
+            data = filterByMonthYear(data, selectedMonth, selectedYear);
+        }
+
         if (filterCategory !== 'All') {
             data = data.filter(e => e.category === filterCategory);
         }
         return data;
-    }, [expenses, selectedMonth, selectedYear, filterCategory]);
+    }, [expenses, selectedMonth, selectedYear, selectedDate, filterType, filterCategory]);
 
-    const filteredUsage = useMemo(() =>
-        filterByMonthYear(rawMaterialUsage, selectedMonth, selectedYear),
-        [rawMaterialUsage, selectedMonth, selectedYear]
-    );
+    const filteredUsage = useMemo(() => {
+        if (filterType === 'date') {
+            return rawMaterialUsage.filter(u => {
+                const uDate = new Date(u.date).toISOString().split('T')[0];
+                return uDate === selectedDate;
+            });
+        }
+        return filterByMonthYear(rawMaterialUsage, selectedMonth, selectedYear);
+    }, [rawMaterialUsage, selectedMonth, selectedYear, selectedDate, filterType]);
 
     // Use actual backend stock values (carries forward across months)
     const stockData = useMemo(() => {
@@ -656,6 +673,48 @@ const Expenses = ({ onNavigateBack }) => {
             {/* --- Tab 3: Raw Material Usage --- */}
             {activeTab === 'usage' && (
                 <div className="space-y-4">
+                    {/* Filters for Usage */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm space-y-3">
+                        <div className="flex gap-2 border-b pb-2 mb-2">
+                            <button
+                                className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'month' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                onClick={() => setFilterType('month')}
+                            >
+                                Month View
+                            </button>
+                            <button
+                                className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'date' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                onClick={() => setFilterType('date')}
+                            >
+                                Date View
+                            </button>
+                        </div>
+
+                        {filterType === 'month' ? (
+                            <div className="flex gap-2">
+                                <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="flex-1 border rounded p-2 text-sm">
+                                    {Array.from({ length: 12 }, (_, i) => (
+                                        <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
+                                    ))}
+                                </select>
+                                <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-24 border rounded p-2 text-sm">
+                                    <option value="2023">2023</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2025">2025</option>
+                                </select>
+                            </div>
+                        ) : (
+                            <div>
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    className="w-full border rounded p-2 text-sm"
+                                />
+                            </div>
+                        )}
+                    </div>
+
                     {/* Usage Form */}
                     <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
                         <div className="flex justify-between items-center">
@@ -758,7 +817,9 @@ const Expenses = ({ onNavigateBack }) => {
                                     <div key={u.id} className="p-3 flex justify-between items-center">
                                         <div>
                                             <div className="font-medium text-gray-800">{u.materialName}</div>
-                                            <div className="text-xs text-gray-500">{u.date} • {u.quantityUsed} {u.unit}</div>
+                                            <div className="text-xs text-gray-500">
+                                                {new Date(u.date).toLocaleDateString()} • {u.quantityUsed} {u.unit} • {formatCurrency(u.cost)}
+                                            </div>
                                             {u.notes && <div className="text-xs text-gray-400 italic">{u.notes}</div>}
                                         </div>
                                         <div className="flex gap-2">
@@ -778,18 +839,44 @@ const Expenses = ({ onNavigateBack }) => {
                 <div className="space-y-4">
                     {/* Filters */}
                     <div className="bg-white p-4 rounded-lg shadow-sm space-y-3">
-                        <div className="flex gap-2">
-                            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="flex-1 border rounded p-2 text-sm">
-                                {Array.from({ length: 12 }, (_, i) => (
-                                    <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
-                                ))}
-                            </select>
-                            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-24 border rounded p-2 text-sm">
-                                <option value="2023">2023</option>
-                                <option value="2024">2024</option>
-                                <option value="2025">2025</option>
-                            </select>
+                        <div className="flex gap-2 border-b pb-2 mb-2">
+                            <button
+                                className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'month' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                onClick={() => setFilterType('month')}
+                            >
+                                Month View
+                            </button>
+                            <button
+                                className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'date' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                onClick={() => setFilterType('date')}
+                            >
+                                Date View
+                            </button>
                         </div>
+
+                        {filterType === 'month' ? (
+                            <div className="flex gap-2">
+                                <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="flex-1 border rounded p-2 text-sm">
+                                    {Array.from({ length: 12 }, (_, i) => (
+                                        <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
+                                    ))}
+                                </select>
+                                <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-24 border rounded p-2 text-sm">
+                                    <option value="2023">2023</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2025">2025</option>
+                                </select>
+                            </div>
+                        ) : (
+                            <div>
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    className="w-full border rounded p-2 text-sm"
+                                />
+                            </div>
+                        )}
                         <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full border rounded p-2 text-sm">
                             <option value="All">All Categories</option>
                             <option value="Raw Material">Raw Material</option>

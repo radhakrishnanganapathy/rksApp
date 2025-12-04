@@ -7,6 +7,8 @@ const Stats = ({ onNavigateBack }) => {
     const { sales, production, expenses, attendance, employees, customers } = useData();
     const [selectedMonth, setSelectedMonth] = useState('');
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [filterType, setFilterType] = useState('month'); // 'month' or 'date'
     const [selectedCustomer, setSelectedCustomer] = useState('');
 
     // Filter data based on month/year
@@ -14,6 +16,11 @@ const Stats = ({ onNavigateBack }) => {
         const filterByDate = (data, dateField = 'date') => {
             return data.filter(item => {
                 const date = new Date(item[dateField]);
+
+                if (filterType === 'date') {
+                    return date.toISOString().split('T')[0] === selectedDate;
+                }
+
                 const yearMatch = date.getFullYear() === parseInt(selectedYear);
                 if (selectedMonth === '') {
                     return yearMatch; // Whole year
@@ -28,7 +35,7 @@ const Stats = ({ onNavigateBack }) => {
             expenses: filterByDate(expenses),
             attendance: filterByDate(attendance)
         };
-    }, [sales, production, expenses, attendance, selectedMonth, selectedYear]);
+    }, [sales, production, expenses, attendance, selectedMonth, selectedYear, selectedDate, filterType]);
 
     // Calculate main statistics
     const stats = useMemo(() => {
@@ -95,10 +102,14 @@ const Stats = ({ onNavigateBack }) => {
             const customerName = customer ? customer.name : 'Unknown';
 
             if (!customerData[customerName]) {
-                customerData[customerName] = { sales: 0, earn: 0, customerId: sale.customerId };
+                customerData[customerName] = { sales: 0, earn: 0, kg: 0, customerId: sale.customerId };
             }
             customerData[customerName].sales += 1;
             customerData[customerName].earn += Number(sale.total);
+
+            // Calculate total kg for this sale
+            const saleKg = sale.items.reduce((sum, item) => sum + Number(item.qty), 0);
+            customerData[customerName].kg += saleKg;
         });
         return Object.keys(customerData).map(name => ({
             name,
@@ -112,7 +123,7 @@ const Stats = ({ onNavigateBack }) => {
 
         const itemData = {};
         filteredData.sales
-            .filter(sale => sale.customerId === Number(selectedCustomer))
+            .filter(sale => String(sale.customerId) === String(selectedCustomer))
             .forEach(sale => {
                 sale.items.forEach(item => {
                     if (!itemData[item.name]) {
@@ -145,111 +156,99 @@ const Stats = ({ onNavigateBack }) => {
 
             {/* Filter Section */}
             <div className="bg-white p-4 rounded-lg shadow-sm space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Month (Optional)</label>
-                        <select
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="w-full border rounded p-2"
-                        >
-                            <option value="">Whole Year</option>
-                            {Array.from({ length: 12 }, (_, i) => (
-                                <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Year</label>
-                        <select
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(e.target.value)}
-                            className="w-full border rounded p-2"
-                        >
-                            <option value="2023">2023</option>
-                            <option value="2024">2024</option>
-                            <option value="2025">2025</option>
-                        </select>
-                    </div>
+                <div className="flex gap-2 border-b pb-2 mb-2">
+                    <button
+                        className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'month' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        onClick={() => setFilterType('month')}
+                    >
+                        Month View
+                    </button>
+                    <button
+                        className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'date' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        onClick={() => setFilterType('date')}
+                    >
+                        Date View
+                    </button>
                 </div>
+
+                {filterType === 'month' ? (
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Month (Optional)</label>
+                            <select
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                className="w-full border rounded p-2"
+                            >
+                                <option value="">Whole Year</option>
+                                {Array.from({ length: 12 }, (_, i) => (
+                                    <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Year</label>
+                            <select
+                                value={selectedYear}
+                                onChange={(e) => setSelectedYear(e.target.value)}
+                                className="w-full border rounded p-2"
+                            >
+                                <option value="2023">2023</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                            </select>
+                        </div>
+                    </div>
+                ) : (
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Select Date</label>
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="w-full border rounded p-2"
+                        />
+                    </div>
+                )}
+
                 <p className="text-xs text-gray-500">
-                    {selectedMonth === '' ? `Showing stats for entire year ${selectedYear}` : `Showing stats for ${new Date(0, selectedMonth).toLocaleString('default', { month: 'long' })} ${selectedYear}`}
+                    {filterType === 'date'
+                        ? `Showing stats for ${new Date(selectedDate).toLocaleDateString()}`
+                        : (selectedMonth === '' ? `Showing stats for entire year ${selectedYear}` : `Showing stats for ${new Date(0, selectedMonth).toLocaleString('default', { month: 'long' })} ${selectedYear}`)
+                    }
                 </p>
             </div>
 
-            {/* Main Stats Cards */}
-            <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-100">
-                    <div className="flex items-center gap-2 text-blue-600 mb-1">
-                        <Package size={16} />
-                        <span className="text-xs font-semibold uppercase">Production</span>
-                    </div>
-                    <p className="text-xl font-bold text-gray-800">{stats.totalProductionKg} kg</p>
-                </div>
 
-                <div className="bg-green-50 p-4 rounded-xl shadow-sm border border-green-100">
-                    <div className="flex items-center gap-2 text-green-600 mb-1">
-                        <ShoppingCart size={16} />
-                        <span className="text-xs font-semibold uppercase">Sales</span>
-                    </div>
-                    <p className="text-xl font-bold text-gray-800">{stats.totalSalesKg} kg</p>
-                </div>
-
-                <div className="bg-red-50 p-4 rounded-xl shadow-sm border border-red-100">
-                    <div className="flex items-center gap-2 text-red-600 mb-1">
-                        <TrendingDown size={16} />
-                        <span className="text-xs font-semibold uppercase">Expenses</span>
-                    </div>
-                    <p className="text-xl font-bold text-gray-800">{formatCurrency(stats.totalExpenses)}</p>
-                </div>
-
-                <div className="bg-purple-50 p-4 rounded-xl shadow-sm border border-purple-100">
-                    <div className="flex items-center gap-2 text-purple-600 mb-1">
-                        <Users size={16} />
-                        <span className="text-xs font-semibold uppercase">Salary</span>
-                    </div>
-                    <p className="text-xl font-bold text-gray-800">{formatCurrency(stats.totalSalary)}</p>
-                </div>
-
-                <div className="bg-primary-50 p-4 rounded-xl shadow-sm border border-primary-100">
-                    <div className="flex items-center gap-2 text-primary-700 mb-1">
-                        <DollarSign size={16} />
-                        <span className="text-xs font-semibold uppercase">Total Earn</span>
-                    </div>
-                    <p className="text-xl font-bold text-gray-800">{formatCurrency(stats.totalEarn)}</p>
-                </div>
-
-                <div className={`p-4 rounded-xl shadow-sm border ${stats.profitLoss >= 0 ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
-                    <div className={`flex items-center gap-2 mb-1 ${stats.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        <TrendingUp size={16} />
-                        <span className="text-xs font-semibold uppercase">Profit/Loss</span>
-                    </div>
-                    <p className={`text-xl font-bold ${stats.profitLoss >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                        {formatCurrency(Math.abs(stats.profitLoss))}
-                        {stats.profitLoss < 0 && ' Loss'}
-                    </p>
-                </div>
-            </div>
 
             {/* Item-wise Sales */}
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="p-3 bg-primary-50 border-b border-primary-100">
                     <h3 className="font-semibold text-gray-700">Item-wise Sales & Earnings</h3>
                 </div>
-                <div className="divide-y max-h-64 overflow-y-auto">
-                    {itemWiseStats.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">No sales data</div>
-                    ) : (
-                        itemWiseStats.map((item, idx) => (
-                            <div key={idx} className="p-4 flex justify-between items-center">
-                                <div>
-                                    <p className="font-semibold text-gray-800">{item.name}</p>
-                                    <p className="text-xs text-gray-500">{item.kg} kg sold</p>
-                                </div>
-                                <p className="font-bold text-primary-600">{formatCurrency(item.earn)}</p>
-                            </div>
-                        ))
-                    )}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-gray-500 uppercase bg-gray-50">
+                            <tr>
+                                <th className="px-4 py-2">Item</th>
+                                <th className="px-4 py-2 text-right">Sales (kg)</th>
+                                <th className="px-4 py-2 text-right">Sales (Rs)</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {itemWiseStats.length === 0 ? (
+                                <tr><td colSpan="3" className="p-4 text-center text-gray-500">No sales data</td></tr>
+                            ) : (
+                                itemWiseStats.map((item, idx) => (
+                                    <tr key={idx}>
+                                        <td className="px-4 py-2 font-medium text-gray-800">{item.name}</td>
+                                        <td className="px-4 py-2 text-right text-gray-600">{item.kg} kg</td>
+                                        <td className="px-4 py-2 text-right font-bold text-primary-600">{formatCurrency(item.earn)}</td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -258,20 +257,29 @@ const Stats = ({ onNavigateBack }) => {
                 <div className="p-3 bg-blue-50 border-b border-blue-100">
                     <h3 className="font-semibold text-gray-700">Customer-wise Sales & Earnings</h3>
                 </div>
-                <div className="divide-y max-h-64 overflow-y-auto">
-                    {customerWiseStats.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">No sales data</div>
-                    ) : (
-                        customerWiseStats.map((customer, idx) => (
-                            <div key={idx} className="p-4 flex justify-between items-center">
-                                <div>
-                                    <p className="font-semibold text-gray-800">{customer.name}</p>
-                                    <p className="text-xs text-gray-500">{customer.sales} orders</p>
-                                </div>
-                                <p className="font-bold text-blue-600">{formatCurrency(customer.earn)}</p>
-                            </div>
-                        ))
-                    )}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-gray-500 uppercase bg-gray-50">
+                            <tr>
+                                <th className="px-4 py-2">Customer</th>
+                                <th className="px-4 py-2 text-right">Sales (kg)</th>
+                                <th className="px-4 py-2 text-right">Sales (Rs)</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {customerWiseStats.length === 0 ? (
+                                <tr><td colSpan="3" className="p-4 text-center text-gray-500">No sales data</td></tr>
+                            ) : (
+                                customerWiseStats.map((customer, idx) => (
+                                    <tr key={idx}>
+                                        <td className="px-4 py-2 font-medium text-gray-800">{customer.name}</td>
+                                        <td className="px-4 py-2 text-right text-gray-600">{customer.kg} kg</td>
+                                        <td className="px-4 py-2 text-right font-bold text-blue-600">{formatCurrency(customer.earn)}</td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -294,20 +302,29 @@ const Stats = ({ onNavigateBack }) => {
                     </select>
 
                     {selectedCustomer && (
-                        <div className="divide-y border-t">
-                            {customerItemBreakdown.length === 0 ? (
-                                <div className="p-4 text-center text-gray-500">No purchases by this customer</div>
-                            ) : (
-                                customerItemBreakdown.map((item, idx) => (
-                                    <div key={idx} className="py-3 flex justify-between items-center">
-                                        <div>
-                                            <p className="font-medium text-gray-800">{item.name}</p>
-                                            <p className="text-xs text-gray-500">{item.qty} kg</p>
-                                        </div>
-                                        <p className="font-bold text-green-600">{formatCurrency(item.earn)}</p>
-                                    </div>
-                                ))
-                            )}
+                        <div className="overflow-x-auto border rounded-lg">
+                            <table className="w-full text-sm text-left">
+                                <thead className="text-xs text-gray-500 uppercase bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-2">Item</th>
+                                        <th className="px-4 py-2 text-right">Sales (kg)</th>
+                                        <th className="px-4 py-2 text-right">Sales (Rs)</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {customerItemBreakdown.length === 0 ? (
+                                        <tr><td colSpan="3" className="p-4 text-center text-gray-500">No purchases by this customer</td></tr>
+                                    ) : (
+                                        customerItemBreakdown.map((item, idx) => (
+                                            <tr key={idx}>
+                                                <td className="px-4 py-2 font-medium text-gray-800">{item.name}</td>
+                                                <td className="px-4 py-2 text-right text-gray-600">{item.qty} kg</td>
+                                                <td className="px-4 py-2 text-right font-bold text-green-600">{formatCurrency(item.earn)}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </div>

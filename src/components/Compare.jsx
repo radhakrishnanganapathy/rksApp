@@ -101,7 +101,7 @@ const Compare = ({ onNavigateBack }) => {
             if (!data[customerName]) {
                 data[customerName] = 0;
             }
-            data[customerName] += sale.total;
+            data[customerName] += Number(sale.total);
         });
 
         return Object.keys(data).map(name => ({
@@ -115,14 +115,14 @@ const Compare = ({ onNavigateBack }) => {
         if (viewType === 'kg') {
             return comparisonData.reduce((sum, item) => sum + item.period1, 0);
         }
-        return period1Sales.reduce((sum, sale) => sum + sale.total, 0);
+        return period1Sales.reduce((sum, sale) => sum + Number(sale.total), 0);
     }, [comparisonData, period1Sales, viewType]);
 
     const period2Total = useMemo(() => {
         if (viewType === 'kg') {
             return comparisonData.reduce((sum, item) => sum + item.period2, 0);
         }
-        return period2Sales.reduce((sum, sale) => sum + sale.total, 0);
+        return period2Sales.reduce((sum, sale) => sum + Number(sale.total), 0);
     }, [comparisonData, period2Sales, viewType]);
 
     const getPeriodLabel = (mode, month, year, date) => {

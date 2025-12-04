@@ -43,7 +43,7 @@ const Production = ({ onNavigateBack }) => {
 
         try {
             if (id) {
-                await updateProduction(productionData);
+                await updateProduction(id, productionData);
                 alert('Production Updated!');
             } else {
                 await addProduction(productionData);

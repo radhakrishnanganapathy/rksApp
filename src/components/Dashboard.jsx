@@ -18,30 +18,44 @@ const Dashboard = () => {
 
     const [selectedMonth, setSelectedMonth] = useState(currentMonth);
     const [selectedYear, setSelectedYear] = useState(currentYear);
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [filterType, setFilterType] = useState('month'); // 'month' or 'date'
     const [chartType, setChartType] = useState('bar');
     const [customerChartType, setCustomerChartType] = useState('bar'); // 'bar' or 'pie'
+    const [salesGraphMetric, setSalesGraphMetric] = useState('rs'); // 'rs' or 'kg'
+    const [customerMetric, setCustomerMetric] = useState('rs'); // 'rs' or 'kg'
 
-    // Filter Data - Only show regular sales (not order-converted)
-    const filteredSales = useMemo(() => {
-        const regularSales = sales.filter(sale => !sale.buyType || sale.buyType === 'regular');
-        return filterByMonthYear(regularSales, selectedMonth, selectedYear);
-    }, [sales, selectedMonth, selectedYear]);
-
-    // Filter delivered orders for the same period
-    const filteredDeliveredOrders = useMemo(() => {
-        const deliveredOrders = orders.filter(order => order.status === 'delivered');
-        // Use bookingDate as it's more likely to be in the current month for recent orders
-        return filterByMonthYear(deliveredOrders, selectedMonth, selectedYear, 'bookingDate');
-    }, [orders, selectedMonth, selectedYear]);
-
-    const filteredProduction = useMemo(() => filterByMonthYear(production, selectedMonth, selectedYear), [production, selectedMonth, selectedYear]);
-    const filteredExpenses = useMemo(() => filterByMonthYear(expenses, selectedMonth, selectedYear), [expenses, selectedMonth, selectedYear]);
 
     // Helper for safe number conversion
     const safeNum = (val) => {
         const num = Number(val);
         return isNaN(num) ? 0 : num;
     };
+
+    const filterByDate = (data, dateField = 'date') => {
+        if (!data) return [];
+        return data.filter(item => {
+            const itemDate = new Date(item[dateField]);
+            if (filterType === 'date') {
+                return itemDate.toISOString().split('T')[0] === selectedDate;
+            }
+            // Month filter
+            const yearMatch = itemDate.getFullYear() === parseInt(selectedYear);
+            if (selectedMonth === 'all') return yearMatch;
+            return yearMatch && itemDate.getMonth() === parseInt(selectedMonth);
+        });
+    };
+
+    // Filter Data - Only show regular sales (not order-converted)
+    const filteredSales = useMemo(() => filterByDate(sales.filter(sale => !sale.buyType || sale.buyType === 'regular')), [sales, selectedMonth, selectedYear, selectedDate, filterType]);
+    const filteredProduction = useMemo(() => filterByDate(production), [production, selectedMonth, selectedYear, selectedDate, filterType]);
+    const filteredExpenses = useMemo(() => filterByDate(expenses), [expenses, selectedMonth, selectedYear, selectedDate, filterType]);
+    const filteredAttendance = useMemo(() => filterByDate(attendance), [attendance, selectedMonth, selectedYear, selectedDate, filterType]);
+
+    // Filter Delivered Orders (using bookingDate as the reference date)
+    const filteredDeliveredOrders = useMemo(() => {
+        return filterByDate(orders.filter(o => o.status === 'delivered'), 'bookingDate');
+    }, [orders, selectedMonth, selectedYear, selectedDate, filterType]);
 
     // Calculate Totals - Include both sales AND delivered orders
     const totalSales = safeNum(filteredSales.reduce((sum, item) => sum + safeNum(item.total), 0)) +
@@ -74,8 +88,6 @@ const Dashboard = () => {
     // --- New Metrics Calculation ---
 
     // 1. Calculate Total Salary based on Attendance
-    const filteredAttendance = useMemo(() => filterByMonthYear(attendance, selectedMonth, selectedYear), [attendance, selectedMonth, selectedYear]);
-
     const totalSalary = useMemo(() => {
         return filteredAttendance.reduce((sum, record) => {
             if (record.status === 'present') {
@@ -87,7 +99,7 @@ const Dashboard = () => {
     }, [filteredAttendance, employees]);
 
     // 2. Calculate Total Usage Cost
-    const filteredUsageCost = useMemo(() => filterByMonthYear(rawMaterialUsage, selectedMonth, selectedYear), [rawMaterialUsage, selectedMonth, selectedYear]);
+    const filteredUsageCost = useMemo(() => filterByDate(rawMaterialUsage), [rawMaterialUsage, selectedMonth, selectedYear, selectedDate, filterType]);
     const totalUsageCost = filteredUsageCost.reduce((sum, u) => sum + safeNum(u.cost || 0), 0);
 
     // 3. Calculate Operational Expenses (Expenses excluding Raw Material purchases)
@@ -100,6 +112,9 @@ const Dashboard = () => {
 
     // Metric 2: Usage Based Expense = Raw Material Usage Cost + Operational Expenses + Salary
     const usageBasedExpense = safeNum(totalUsageCost) + safeNum(operationalExpenses) + safeNum(totalSalary);
+
+    // Metric 3: Raw Profit
+    const rawProfit = (totalProductionQty * 170) - (safeNum(totalUsageCost) + safeNum(totalSalary));
 
     // Chart Data Preparation
     // 1. Total quantity (kg) sold per item – used for Pie & Bar charts (includes delivered orders)
@@ -124,19 +139,35 @@ const Dashboard = () => {
     const dailySales = useMemo(() => {
         const data = {};
 
-        if (selectedMonth === 'all') {
+        const getValue = (items) => {
+            return items.reduce((sum, it) => {
+                if (salesGraphMetric === 'kg') return sum + safeNum(it.qty);
+                return sum + safeNum(it.qty) * safeNum(it.price);
+            }, 0);
+        };
+
+        if (filterType === 'date') {
+            // If filtering by specific date, show a single point or nothing
+            const dateKey = new Date(selectedDate).toLocaleDateString();
+            let totalValue = 0;
+            filteredSales.forEach(sale => {
+                totalValue += getValue(sale.items);
+            });
+            filteredDeliveredOrders.forEach(order => {
+                totalValue += getValue(order.items);
+            });
+            return totalValue > 0 ? [{ name: dateKey, value: totalValue }] : [];
+        } else if (selectedMonth === 'all') {
             // Whole Year selected: Aggregate by month
             filteredSales.forEach(sale => {
                 const date = new Date(sale.date);
                 const monthName = date.toLocaleString('default', { month: 'short' });
-                const total = sale.items.reduce((sum, it) => sum + safeNum(it.qty) * safeNum(it.price), 0);
-                data[monthName] = (data[monthName] || 0) + total;
+                data[monthName] = (data[monthName] || 0) + getValue(sale.items);
             });
             filteredDeliveredOrders.forEach(order => {
                 const date = new Date(order.bookingDate);
                 const monthName = date.toLocaleString('default', { month: 'short' });
-                const total = order.items.reduce((sum, it) => sum + safeNum(it.qty) * safeNum(it.price), 0);
-                data[monthName] = (data[monthName] || 0) + total;
+                data[monthName] = (data[monthName] || 0) + getValue(order.items);
             });
 
             // Return months in order (Jan to Dec)
@@ -148,13 +179,11 @@ const Dashboard = () => {
             // Specific month selected: Aggregate by day
             filteredSales.forEach(sale => {
                 const day = new Date(sale.date).toLocaleDateString();
-                const total = sale.items.reduce((sum, it) => sum + safeNum(it.qty) * safeNum(it.price), 0);
-                data[day] = (data[day] || 0) + total;
+                data[day] = (data[day] || 0) + getValue(sale.items);
             });
             filteredDeliveredOrders.forEach(order => {
                 const day = new Date(order.bookingDate).toLocaleDateString();
-                const total = order.items.reduce((sum, it) => sum + safeNum(it.qty) * safeNum(it.price), 0);
-                data[day] = (data[day] || 0) + total;
+                data[day] = (data[day] || 0) + getValue(order.items);
             });
 
             // Sort by date
@@ -163,7 +192,7 @@ const Dashboard = () => {
                 .map(date => ({ name: date, value: data[date] }));
             return sorted;
         }
-    }, [filteredSales, filteredDeliveredOrders, selectedMonth]);
+    }, [filteredSales, filteredDeliveredOrders, selectedMonth, selectedDate, filterType, salesGraphMetric]);
 
     const productionByItem = useMemo(() => {
         const data = {};
@@ -185,7 +214,12 @@ const Dashboard = () => {
             if (!data[customerName]) {
                 data[customerName] = 0;
             }
-            data[customerName] += safeNum(sale.total);
+
+            if (customerMetric === 'kg') {
+                data[customerName] += sale.items.reduce((sum, item) => sum + safeNum(item.qty), 0);
+            } else {
+                data[customerName] += safeNum(sale.total);
+            }
         });
 
         return Object.keys(data)
@@ -195,7 +229,7 @@ const Dashboard = () => {
             }))
             .sort((a, b) => b.value - a.value) // Sort by highest to lowest
             .slice(0, 10); // Show top 10 customers
-    }, [filteredSales, filteredDeliveredOrders, customers]);
+    }, [filteredSales, filteredDeliveredOrders, customers, customerMetric]);
 
 
     // Render Item Charts (Pie or Bar)
@@ -265,15 +299,15 @@ const Dashboard = () => {
                         height={80}
                         tick={{ fontSize: 10 }}
                     />
-                    <YAxis label={{ value: 'Sales Amount (₹)', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                    <YAxis label={{ value: salesGraphMetric === 'kg' ? 'Sales (kg)' : 'Sales Amount (₹)', angle: -90, position: 'insideLeft' }} />
+                    <Tooltip formatter={(value) => salesGraphMetric === 'kg' ? `${value} kg` : formatCurrency(value)} />
                     <Legend />
                     <Line
                         type="monotone"
                         dataKey="value"
                         stroke="#8884d8"
                         strokeWidth={2}
-                        name="Daily Sales"
+                        name={salesGraphMetric === 'kg' ? "Daily Sales (kg)" : "Daily Sales (₹)"}
                         dot={{ fill: '#8884d8', r: 4 }}
                         activeDot={{ r: 6 }}
                     />
@@ -297,7 +331,7 @@ const Dashboard = () => {
                             cx="50%"
                             cy="50%"
                             labelLine={false}
-                            label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
+                            label={({ name, value }) => `${name}: ${customerMetric === 'kg' ? `${value} kg` : formatCurrency(value)}`}
                             outerRadius={80}
                             fill="#8884d8"
                             dataKey="value"
@@ -306,7 +340,7 @@ const Dashboard = () => {
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                         </Pie>
-                        <Tooltip formatter={(value) => formatCurrency(value)} />
+                        <Tooltip formatter={(value) => customerMetric === 'kg' ? `${value} kg` : formatCurrency(value)} />
                         <Legend />
                     </PieChart>
                 </ResponsiveContainer>
@@ -319,10 +353,10 @@ const Dashboard = () => {
                 <BarChart data={customerData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} tick={{ fontSize: 10 }} />
-                    <YAxis label={{ value: 'Total Purchase (₹)', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                    <YAxis label={{ value: customerMetric === 'kg' ? 'Total Purchase (kg)' : 'Total Purchase (₹)', angle: -90, position: 'insideLeft' }} />
+                    <Tooltip formatter={(value) => customerMetric === 'kg' ? `${value} kg` : formatCurrency(value)} />
                     <Legend />
-                    <Bar dataKey="value" fill="#8884d8" name="Total Purchase">
+                    <Bar dataKey="value" fill="#8884d8" name={customerMetric === 'kg' ? "Total Purchase (kg)" : "Total Purchase (₹)"}>
                         {customerData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
@@ -334,31 +368,56 @@ const Dashboard = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            {/* Header with Filters */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm">
-                <h2 className="text-xl font-bold text-gray-800">Dashboard</h2>
-                <div className="flex gap-2">
-                    <select
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(e.target.value)}
-                        className="border rounded-lg p-2 text-sm bg-gray-50"
+            {/* Filters */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
+                <div className="flex gap-2 border-b pb-2">
+                    <button
+                        className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'month' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        onClick={() => setFilterType('month')}
                     >
-                        <option value="all">Whole Year</option>
-                        {Array.from({ length: 12 }, (_, i) => (
-                            <option key={i} value={i}>
-                                {new Date(0, i).toLocaleString('default', { month: 'long' })}
-                            </option>
-                        ))}
-                    </select>
-                    <select
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(e.target.value)}
-                        className="border rounded-lg p-2 text-sm bg-gray-50"
+                        Month View
+                    </button>
+                    <button
+                        className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'date' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        onClick={() => setFilterType('date')}
                     >
-                        <option value={currentYear}>{currentYear}</option>
-                        <option value={currentYear - 1}>{currentYear - 1}</option>
-                    </select>
+                        Date View
+                    </button>
                 </div>
+
+                {filterType === 'month' ? (
+                    <div className="flex gap-2">
+                        <select
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="flex-1 border rounded-lg p-2 text-sm bg-gray-50"
+                        >
+                            <option value="all">Whole Year</option>
+                            {Array.from({ length: 12 }, (_, i) => (
+                                <option key={i} value={i}>
+                                    {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(e.target.value)}
+                            className="border rounded-lg p-2 text-sm bg-gray-50"
+                        >
+                            <option value={currentYear}>{currentYear}</option>
+                            <option value={currentYear - 1}>{currentYear - 1}</option>
+                        </select>
+                    </div>
+                ) : (
+                    <div>
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="w-full border rounded-lg p-2 text-sm bg-gray-50"
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Metrics Grid - Rearranged */}
@@ -373,6 +432,8 @@ const Dashboard = () => {
                         {formatCurrency(profit)}
                     </p>
                 </div>
+
+
 
                 <div className="bg-gradient-to-br from-red-50 to-orange-50 p-4 rounded-xl border border-red-100 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
@@ -451,6 +512,18 @@ const Dashboard = () => {
                     <p className="text-2xl font-bold text-gray-800">{formatCurrency(usageBasedExpense)}</p>
                     <p className="text-xs text-gray-500 mt-1">Material Usage + Ops + Salary</p>
                 </div>
+
+                {/* Row 6: Raw Profit */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="text-blue-600" size={20} />
+                        <p className="text-sm font-medium text-gray-600">Raw Profit</p>
+                    </div>
+                    <p className={`text-2xl font-bold ${rawProfit >= 0 ? 'text-blue-700' : 'text-red-600'}`}>
+                        {formatCurrency(rawProfit)}
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-1">(Prod * 170) - (Usage + Salary)</p>
+                </div>
             </div>
 
             {/* Charts Section */}
@@ -474,6 +547,14 @@ const Dashboard = () => {
                     <h3 className="font-semibold text-gray-700">
                         {selectedMonth === 'all' ? 'Monthly Sales' : 'Daily Sales'}
                     </h3>
+                    <select
+                        value={salesGraphMetric}
+                        onChange={(e) => setSalesGraphMetric(e.target.value)}
+                        className="border rounded px-3 py-1 text-sm bg-white"
+                    >
+                        <option value="rs">Revenue (₹)</option>
+                        <option value="kg">Quantity (kg)</option>
+                    </select>
                 </div>
                 {renderLineChart()}
             </div>
@@ -482,14 +563,24 @@ const Dashboard = () => {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="font-semibold text-gray-700">Customer Total Purchase</h3>
-                    <select
-                        value={customerChartType}
-                        onChange={(e) => setCustomerChartType(e.target.value)}
-                        className="border rounded px-3 py-1 text-sm bg-white"
-                    >
-                        <option value="bar">Bar Chart</option>
-                        <option value="pie">Pie Chart</option>
-                    </select>
+                    <div className="flex gap-2">
+                        <select
+                            value={customerMetric}
+                            onChange={(e) => setCustomerMetric(e.target.value)}
+                            className="border rounded px-3 py-1 text-sm bg-white"
+                        >
+                            <option value="rs">Revenue (₹)</option>
+                            <option value="kg">Quantity (kg)</option>
+                        </select>
+                        <select
+                            value={customerChartType}
+                            onChange={(e) => setCustomerChartType(e.target.value)}
+                            className="border rounded px-3 py-1 text-sm bg-white"
+                        >
+                            <option value="bar">Bar Chart</option>
+                            <option value="pie">Pie Chart</option>
+                        </select>
+                    </div>
                 </div>
                 {renderCustomerChart()}
             </div>

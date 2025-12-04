@@ -81,47 +81,48 @@ export const DataProvider = ({ children }) => {
         pricePerUnit: Number(p.price_per_unit)
     });
 
+    const refreshData = async () => {
+        setLoading(true);
+        try {
+            const endpoints = [
+                'sales', 'production', 'expenses', 'stocks',
+                'customers', 'employees', 'attendance', 'orders', 'raw-material-purchases', 'raw-material-usage', 'raw-material-prices'
+            ];
+
+            const responses = await Promise.all(
+                endpoints.map(endpoint => fetch(`${API_URL}/${endpoint}`))
+            );
+
+            // Check for errors
+            for (let i = 0; i < responses.length; i++) {
+                if (!responses[i].ok) {
+                    throw new Error(`Failed to fetch ${endpoints[i]}: ${responses[i].statusText}`);
+                }
+            }
+
+            const data = await Promise.all(responses.map(res => res.json()));
+
+            setSales(data[0]?.map(mapSale) || []);
+            setProduction(data[1]?.map(mapProduction) || []);
+            setExpenses(data[2]?.map(mapExpense) || []);
+            setStocks(data[3] || { products: [], rawMaterials: [] });
+            setCustomers(data[4] || []);
+            setEmployees(data[5]?.map(mapEmployee) || []);
+            setAttendance(data[6]?.map(mapAttendance) || []);
+            setOrders(data[7]?.map(mapOrder) || []);
+            setRawMaterialPurchases(data[8]?.map(mapPurchase) || []);
+            setRawMaterialUsage(data[9]?.map(mapUsage) || []);
+            setRawMaterialPrices(data[10]?.map(mapRawMaterialPrice) || []);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Fetch Initial Data
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const endpoints = [
-                    'sales', 'production', 'expenses', 'stocks',
-                    'customers', 'employees', 'attendance', 'orders', 'raw-material-purchases', 'raw-material-usage', 'raw-material-prices'
-                ];
-
-                const responses = await Promise.all(
-                    endpoints.map(endpoint => fetch(`${API_URL}/${endpoint}`))
-                );
-
-                // Check for errors
-                for (let i = 0; i < responses.length; i++) {
-                    if (!responses[i].ok) {
-                        throw new Error(`Failed to fetch ${endpoints[i]}: ${responses[i].statusText}`);
-                    }
-                }
-
-                const data = await Promise.all(responses.map(res => res.json()));
-
-                setSales(data[0]?.map(mapSale) || []);
-                setProduction(data[1]?.map(mapProduction) || []);
-                setExpenses(data[2]?.map(mapExpense) || []);
-                setStocks(data[3] || { products: [], rawMaterials: [] });
-                setCustomers(data[4] || []);
-                setEmployees(data[5]?.map(mapEmployee) || []);
-                setAttendance(data[6]?.map(mapAttendance) || []);
-                setOrders(data[7]?.map(mapOrder) || []);
-                setRawMaterialPurchases(data[8]?.map(mapPurchase) || []);
-                setRawMaterialUsage(data[9]?.map(mapUsage) || []);
-                setRawMaterialPrices(data[10]?.map(mapRawMaterialPrice) || []);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
+        refreshData();
     }, []);
 
     const addSale = async (sale) => {
@@ -731,7 +732,7 @@ export const DataProvider = ({ children }) => {
 
     const deleteStock = async (type, name) => {
         try {
-            const res = await fetch(`${API_URL}/stocks/${type}/${name}`, { method: 'DELETE' });
+            const res = await fetch(`${API_URL}/stocks/${type}/${encodeURIComponent(name)}`, { method: 'DELETE' });
             if (res.ok) {
                 // Refetch stocks to simplify state update for composite key
                 const stocksRes = await fetch(`${API_URL}/stocks`);
@@ -744,7 +745,7 @@ export const DataProvider = ({ children }) => {
 
     const updateStock = async (type, name, data) => {
         try {
-            await fetch(`${API_URL}/stocks/${type}/${name}`, {
+            await fetch(`${API_URL}/stocks/${type}/${encodeURIComponent(name)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -805,7 +806,7 @@ export const DataProvider = ({ children }) => {
             rawMaterialUsage, addRawMaterialUsage, deleteRawMaterialUsage, updateRawMaterialUsage,
             rawMaterialPrices, addRawMaterialPrice, updateRawMaterialPrice, deleteRawMaterialPrice,
             items,
-            loading
+            loading, refreshData
         }}>
             {children}
         </DataContext.Provider>

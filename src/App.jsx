@@ -18,6 +18,7 @@ import Orders from './components/Orders';
 import RawMaterialPrices from './components/RawMaterialPrices';
 import DataManagement from './components/DataManagement';
 import BalanceAmount from './components/BalanceAmount';
+import GestureHandler from './components/GestureHandler';
 
 import { useData } from './context/DataContext';
 
@@ -69,9 +70,16 @@ function App() {
   }
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-      {renderContent()}
-    </Layout>
+    <GestureHandler onBack={() => {
+      // Simple history back or tab navigation logic
+      if (activeTab !== 'dashboard') {
+        setActiveTab('more'); // Default back behavior for tabs
+      }
+    }}>
+      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+        {renderContent()}
+      </Layout>
+    </GestureHandler>
   );
 }
 
