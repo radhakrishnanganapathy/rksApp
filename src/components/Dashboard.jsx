@@ -82,8 +82,7 @@ const Dashboard = () => {
         return [...unpaidSales, ...unpaidOrders].reduce((sum, item) => sum + safeNum(item.total), 0);
     }, [sales, orders]);
 
-    // Profit Calculation (Simplified: Sales - Expenses)
-    const profit = safeNum(totalSales) - safeNum(totalExpenses);
+
 
     // --- New Metrics Calculation ---
 
@@ -113,8 +112,11 @@ const Dashboard = () => {
     // Metric 2: Usage Based Expense = Raw Material Usage Cost + Operational Expenses + Salary
     const usageBasedExpense = safeNum(totalUsageCost) + safeNum(operationalExpenses) + safeNum(totalSalary);
 
+    // Profit Calculation (Net Profit: Sales - Overall Expenses)
+    const profit = safeNum(totalSales) - safeNum(overallExpense);
+
     // Metric 3: Raw Profit
-    const rawProfit = (totalProductionQty * 170) - (safeNum(totalUsageCost) + safeNum(totalSalary));
+    const rawProfit = (totalProductionQty * 170) - usageBasedExpense;
 
     // Chart Data Preparation
     // 1. Total quantity (kg) sold per item – used for Pie & Bar charts (includes delivered orders)

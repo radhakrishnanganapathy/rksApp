@@ -1,7 +1,7 @@
 {
   "name": "rks",
   "private": true,
-  "version": "1.6.0",
+  "version": "1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,10 @@
     "@capacitor/android": "^5.7.8",
     "@capacitor/cli": "^5.7.8",
     "@capacitor/core": "^5.7.8",
+    "@capacitor/filesystem": "^5.2.2",
+    "@capacitor/local-notifications": "^5.0.8",
+    "@capacitor/network": "^5.0.8",
+    "@capacitor/preferences": "^5.0.8",
     "autoprefixer": "^10.4.22",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

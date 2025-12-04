@@ -1183,6 +1183,62 @@ app.post('/api/import', async (req, res) => {
     }
 });
 
+// --- Backup ---
+app.get('/api/backup/sql', async (req, res) => {
+    try {
+        const tables = ['customers', 'sales', 'orders', 'expenses', 'production', 'stocks', 'employees', 'attendance', 'raw_material_purchases', 'raw_material_usage', 'raw_material_prices'];
+        let sqlDump = `-- Database Dump generated at ${new Date().toISOString()}\n\n`;
+
+        const escapeSql = (val) => {
+            if (val === null || val === undefined) return 'NULL';
+            if (typeof val === 'number') return val;
+            if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+            if (typeof val === 'object') {
+                if (val instanceof Date) return `'${val.toISOString()}'`;
+                return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
+            }
+            return `'${String(val).replace(/'/g, "''")}'`;
+        };
+
+        for (const table of tables) {
+            try {
+                const result = await db.query(`SELECT * FROM ${table}`);
+                const rows = result.rows;
+
+                if (rows.length > 0) {
+                    sqlDump += `-- Data for ${table}\n`;
+                    const columns = Object.keys(rows[0]);
+
+                    for (const row of rows) {
+                        const values = columns.map(col => escapeSql(row[col])).join(', ');
+                        let conflictClause = 'ON CONFLICT DO NOTHING';
+
+                        if (table === 'stocks') {
+                            conflictClause = 'ON CONFLICT (type, name) DO NOTHING';
+                        } else {
+                            // Most tables have 'id' as PK
+                            conflictClause = 'ON CONFLICT (id) DO NOTHING';
+                        }
+
+                        sqlDump += `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${values}) ${conflictClause};\n`;
+                    }
+                    sqlDump += '\n';
+                }
+            } catch (tableErr) {
+                console.error(`Error dumping table ${table}:`, tableErr);
+                sqlDump += `-- Error dumping table ${table}: ${tableErr.message}\n\n`;
+            }
+        }
+
+        res.setHeader('Content-Disposition', `attachment; filename="backup_${Date.now()}.sql"`);
+        res.setHeader('Content-Type', 'application/sql');
+        res.send(sqlDump);
+    } catch (err) {
+        console.error('Backup error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Start server after initializing database
 initializeTables().then(() => {
     app.listen(PORT, () => {

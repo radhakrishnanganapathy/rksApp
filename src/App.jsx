@@ -19,6 +19,7 @@ import RawMaterialPrices from './components/RawMaterialPrices';
 import DataManagement from './components/DataManagement';
 import BalanceAmount from './components/BalanceAmount';
 import GestureHandler from './components/GestureHandler';
+import BackupManager from './components/BackupManager';
 
 import { useData } from './context/DataContext';
 
@@ -76,6 +77,7 @@ function App() {
         setActiveTab('more'); // Default back behavior for tabs
       }
     }}>
+      <BackupManager />
       <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
         {renderContent()}
       </Layout>
