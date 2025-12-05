@@ -3,7 +3,10 @@ import { useData } from '../context/DataContext';
 import { Plus, Package, Trash2, Edit } from 'lucide-react';
 
 const Stock = () => {
-    const { stocks, items, addStock, updateStock, deleteStock } = useData();
+    const { stocks, products, addStock, updateStock, deleteStock } = useData();
+
+    // Filter active products for dropdown
+    const activeProducts = products.filter(p => p.active);
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingStock, setEditingStock] = useState(null);
 
@@ -121,7 +124,7 @@ const Stock = () => {
                                     disabled={!!editingStock}
                                 >
                                     <option value="">Select Product</option>
-                                    {items.map(i => <option key={i} value={i}>{i}</option>)}
+                                    {activeProducts.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                                 </select>
                             </div>
                             <div>

@@ -4,7 +4,10 @@ import { formatCurrency } from '../utils';
 import { Plus, Trash2, Save, ClipboardList, Package, Calendar, CheckCircle, XCircle, Clock, Edit, ArrowLeft } from 'lucide-react';
 
 const Orders = ({ onNavigateBack }) => {
-    const { customers, items, stocks, orders, addOrder, updateOrder, updateOrderStatus, convertOrderToSale, clearOrder, deleteOrder, updateStock } = useData();
+    const { customers, products, stocks, orders, addOrder, updateOrder, updateOrderStatus, convertOrderToSale, clearOrder, deleteOrder, updateStock } = useData();
+
+    // Filter active products for dropdown
+    const activeProducts = products.filter(p => p.active);
 
     const [activeTab, setActiveTab] = useState('new'); // 'new' or 'list'
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -336,7 +339,7 @@ const Orders = ({ onNavigateBack }) => {
                                     className="w-full border rounded p-2"
                                 >
                                     <option value="">Select Product</option>
-                                    {items.map(i => <option key={i} value={i}>{i}</option>)}
+                                    {activeProducts.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                                 </select>
                             </div>
                             <input
