@@ -20,6 +20,7 @@ import DataManagement from './components/DataManagement';
 import BalanceAmount from './components/BalanceAmount';
 import GestureHandler from './components/GestureHandler';
 import BackupManager from './components/BackupManager';
+import Products from './components/Products';
 
 import { useData } from './context/DataContext';
 
@@ -61,6 +62,8 @@ function App() {
         return <RawMaterialPrices onNavigateBack={() => setActiveTab('more')} />;
       case 'data-management':
         return <DataManagement onNavigateBack={() => setActiveTab('more')} />;
+      case 'products':
+        return <Products onNavigateBack={() => setActiveTab('more')} />;
       default:
         return <Dashboard />;
     }

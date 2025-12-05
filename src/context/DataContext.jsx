@@ -19,7 +19,8 @@ export const DataProvider = ({ children }) => {
     const [rawMaterialPurchases, setRawMaterialPurchases] = useState([]);
     const [rawMaterialUsage, setRawMaterialUsage] = useState([]);
     const [rawMaterialPrices, setRawMaterialPrices] = useState([]);
-    const [items] = useState(ITEMS);
+    const [products, setProducts] = useState([]);
+    const [items] = useState(ITEMS); // Keep for backward compatibility
     const [loading, setLoading] = useState(true);
 
     // --- Data Mappers (Backend snake_case -> Frontend camelCase) ---
@@ -86,7 +87,9 @@ export const DataProvider = ({ children }) => {
         try {
             const endpoints = [
                 'sales', 'production', 'expenses', 'stocks',
-                'customers', 'employees', 'attendance', 'orders', 'raw-material-purchases', 'raw-material-usage', 'raw-material-prices'
+                'customers', 'employees', 'attendance', 'orders',
+                'raw-material-purchases', 'raw-material-usage', 'raw-material-prices',
+                'products'
             ];
 
             const responses = await Promise.all(
@@ -113,6 +116,7 @@ export const DataProvider = ({ children }) => {
             setRawMaterialPurchases(data[8]?.map(mapPurchase) || []);
             setRawMaterialUsage(data[9]?.map(mapUsage) || []);
             setRawMaterialPrices(data[10]?.map(mapRawMaterialPrice) || []);
+            setProducts(data[11] || []);
         } catch (error) {
             console.error("Error fetching data:", error);
         } finally {
@@ -791,6 +795,35 @@ export const DataProvider = ({ children }) => {
     const updateRawMaterialPrice = (id, data) => updateItem('raw-material-prices', id, data, setRawMaterialPrices, rawMaterialPrices, mapRawMaterialPrice);
     const deleteRawMaterialPrice = (id) => deleteItem('raw-material-prices', id, setRawMaterialPrices, rawMaterialPrices);
 
+    // Products CRUD
+    const addProduct = async (data) => {
+        try {
+            await addItem('products', data, setProducts, products);
+        } catch (err) {
+            console.error('Error adding product:', err);
+            throw err;
+        }
+    };
+
+    const updateProduct = async (id, data) => {
+        try {
+            await updateItem('products', id, data, setProducts, products);
+        } catch (err) {
+            console.error('Error updating product:', err);
+            throw err;
+        }
+    };
+
+    const deleteProduct = async (id) => {
+        try {
+            // Soft delete - just deactivate
+            await updateProduct(id, { active: false });
+        } catch (err) {
+            console.error('Error deleting product:', err);
+            throw err;
+        }
+    };
+
 
     return (
         <DataContext.Provider value={{
@@ -805,6 +838,7 @@ export const DataProvider = ({ children }) => {
             rawMaterialPurchases, addRawMaterialPurchase, deleteRawMaterialPurchase, updateRawMaterialPurchase,
             rawMaterialUsage, addRawMaterialUsage, deleteRawMaterialUsage, updateRawMaterialUsage,
             rawMaterialPrices, addRawMaterialPrice, updateRawMaterialPrice, deleteRawMaterialPrice,
+            products, addProduct, updateProduct, deleteProduct,
             items,
             loading, refreshData
         }}>

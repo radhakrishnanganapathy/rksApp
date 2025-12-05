@@ -965,6 +965,95 @@ app.delete('/api/raw-material-prices/:id', async (req, res) => {
     }
 });
 
+// --- Products ---
+app.get('/api/products', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM products ORDER BY name ASC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/products', async (req, res) => {
+    const { id, name, category, unit, active } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO products (id, name, category, unit, active) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [id, name, category || null, unit || 'kg', active !== undefined ? active : true]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        // Handle duplicate name error
+        if (err.code === '23505') {
+            return res.status(409).json({ error: 'Product with this name already exists' });
+        }
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/products/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, category, unit, active } = req.body;
+    try {
+        let query = 'UPDATE products SET updated_at = NOW()';
+        const params = [];
+        let paramCount = 1;
+
+        if (name !== undefined) {
+            query += `, name = $${paramCount}`;
+            params.push(name);
+            paramCount++;
+        }
+        if (category !== undefined) {
+            query += `, category = $${paramCount}`;
+            params.push(category);
+            paramCount++;
+        }
+        if (unit !== undefined) {
+            query += `, unit = $${paramCount}`;
+            params.push(unit);
+            paramCount++;
+        }
+        if (active !== undefined) {
+            query += `, active = $${paramCount}`;
+            params.push(active);
+            paramCount++;
+        }
+
+        query += ` WHERE id = $${paramCount} RETURNING *`;
+        params.push(id);
+
+        const result = await db.query(query, params);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        if (err.code === '23505') {
+            return res.status(409).json({ error: 'Product with this name already exists' });
+        }
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/products/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Soft delete: set active = false instead of actually deleting
+        const result = await db.query(
+            'UPDATE products SET active = false, updated_at = NOW() WHERE id = $1 RETURNING *',
+            [id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+        res.json({ message: 'Product deactivated successfully', product: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- Raw Material Usage ---
 app.get('/api/raw-material-usage', async (req, res) => {
     try {
