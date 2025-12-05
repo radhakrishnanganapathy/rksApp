@@ -13,7 +13,7 @@ import {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const Dashboard = () => {
-    const { sales, production, expenses, stocks, orders, attendance, employees, rawMaterialUsage, customers } = useData();
+    const { sales, production, expenses, stocks, orders, attendance, employees, rawMaterialUsage, customers, rawMaterialPrices } = useData();
     const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
 
     const [selectedMonth, setSelectedMonth] = useState(currentMonth);
@@ -75,6 +75,15 @@ const Dashboard = () => {
     // Calculate total stocks in kg
     const totalStocksKg = stocks.products.reduce((sum, product) => sum + safeNum(product.qty), 0);
 
+    // Calculate total raw material stock value (quantity * price from price list)
+    const rawMaterialStockValue = useMemo(() => {
+        return stocks.rawMaterials.reduce((sum, stock) => {
+            const priceItem = rawMaterialPrices.find(p => p.name === stock.name && p.unit === stock.unit);
+            const price = priceItem ? safeNum(priceItem.pricePerUnit) : 0;
+            return sum + (safeNum(stock.qty) * price);
+        }, 0);
+    }, [stocks.rawMaterials, rawMaterialPrices]);
+
     // Calculate total unpaid amount (regular sales + unpaid orders)
     const totalUnpaid = useMemo(() => {
         const unpaidSales = sales.filter(sale => sale.paymentStatus === 'not_paid' && (!sale.buyType || sale.buyType === 'regular'));
@@ -109,11 +118,12 @@ const Dashboard = () => {
     // Metric 1: Overall Expense = Total Expenses (Purchases + Ops) + Salary
     const overallExpense = safeNum(totalExpenses) + safeNum(totalSalary);
 
-    // Metric 2: Usage Based Expense = Raw Material Usage Cost + Operational Expenses + Salary
+    // Metric 2: Usage Based Expense = Raw Material Usage Cost + All Other Expenses (except Raw Material purchases) + Salary
     const usageBasedExpense = safeNum(totalUsageCost) + safeNum(operationalExpenses) + safeNum(totalSalary);
 
-    // Profit Calculation (Net Profit: Sales - Overall Expenses)
-    const profit = safeNum(totalSales) - safeNum(overallExpense);
+    // Profit Calculation (Usage-Based: Sales - Usage Based Expenses)
+    // This is more accurate as it only counts raw materials actually used, not purchased
+    const profit = safeNum(totalSales) - safeNum(usageBasedExpense);
 
     // Metric 3: Raw Profit
     const rawProfit = (totalProductionQty * 170) - usageBasedExpense;
@@ -515,7 +525,7 @@ const Dashboard = () => {
                     <p className="text-xs text-gray-500 mt-1">Material Usage + Ops + Salary</p>
                 </div>
 
-                {/* Row 6: Raw Profit */}
+                {/* Row 6: Raw Profit & Raw Material Stock Value */}
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
                         <TrendingUp className="text-blue-600" size={20} />
@@ -525,6 +535,17 @@ const Dashboard = () => {
                         {formatCurrency(rawProfit)}
                     </p>
                     <p className="text-[10px] text-gray-500 mt-1">(Prod * 170) - (Usage + Salary)</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-4 rounded-xl border border-amber-100 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Package className="text-amber-600" size={20} />
+                        <p className="text-sm font-medium text-gray-600">RM Stock Value</p>
+                    </div>
+                    <p className="text-2xl font-bold text-amber-700">
+                        {formatCurrency(rawMaterialStockValue)}
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-1">Raw Material Stock × Price List</p>
                 </div>
             </div>
 

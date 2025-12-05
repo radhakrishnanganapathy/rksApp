@@ -9,8 +9,10 @@ const BillingList = ({ onEdit }) => {
     const [expandedId, setExpandedId] = useState(null);
 
     // Filters
+    const [filterType, setFilterType] = useState('month'); // 'month' or 'date'
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedCustomer, setSelectedCustomer] = useState('all');
 
     const getCustomerName = (id) => {
@@ -28,10 +30,16 @@ const BillingList = ({ onEdit }) => {
         }
     };
 
-    // 1. Filter by Month/Year
+    // 1. Filter by Month/Year or Date
     const salesByDate = useMemo(() => {
+        if (filterType === 'date') {
+            return sales.filter(sale => {
+                const saleDate = new Date(sale.date).toISOString().split('T')[0];
+                return saleDate === selectedDate;
+            });
+        }
         return filterByMonthYear(sales, selectedMonth, selectedYear);
-    }, [sales, selectedMonth, selectedYear]);
+    }, [sales, selectedMonth, selectedYear, selectedDate, filterType]);
 
     // 2. Filter by Customer Dropdown
     const salesByCustomer = useMemo(() => {
@@ -88,27 +96,55 @@ const BillingList = ({ onEdit }) => {
         <div className="space-y-4">
             {/* Filters */}
             <div className="bg-white p-3 rounded-lg shadow-sm space-y-3">
-                <div className="flex gap-2">
-                    <select
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(e.target.value)}
-                        className="border rounded p-2 text-sm flex-1"
+                {/* Filter Type Toggle */}
+                <div className="flex gap-2 border-b pb-2">
+                    <button
+                        className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'month' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        onClick={() => setFilterType('month')}
                     >
-                        <option value="all">Whole Year</option>
-                        {Array.from({ length: 12 }, (_, i) => (
-                            <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
-                        ))}
-                    </select>
-                    <select
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(e.target.value)}
-                        className="border rounded p-2 text-sm flex-1"
+                        Month View
+                    </button>
+                    <button
+                        className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'date' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        onClick={() => setFilterType('date')}
                     >
-                        <option value="2023">2023</option>
-                        <option value="2024">2024</option>
-                        <option value="2025">2025</option>
-                    </select>
+                        Date View
+                    </button>
                 </div>
+
+                {/* Date Filters */}
+                {filterType === 'month' ? (
+                    <div className="flex gap-2">
+                        <select
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="border rounded p-2 text-sm flex-1"
+                        >
+                            <option value="all">Whole Year</option>
+                            {Array.from({ length: 12 }, (_, i) => (
+                                <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(e.target.value)}
+                            className="border rounded p-2 text-sm flex-1"
+                        >
+                            <option value="2023">2023</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                        </select>
+                    </div>
+                ) : (
+                    <div>
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="w-full border rounded p-2 text-sm"
+                        />
+                    </div>
+                )}
                 <select
                     value={selectedCustomer}
                     onChange={(e) => setSelectedCustomer(e.target.value)}

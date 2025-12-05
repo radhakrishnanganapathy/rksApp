@@ -26,17 +26,33 @@ const LastBuy = ({ onNavigateBack }) => {
         return Math.floor((today - new Date(dateStr)) / (1000 * 60 * 60 * 24));
     };
 
-    const getCardStyle = (daysAgo) => {
-        if (daysAgo <= 4) {
+    const getCardStyle = (hasNoPurchase, daysAgo) => {
+        if (hasNoPurchase) {
+            return 'bg-yellow-50 border-l-4 border-yellow-500 hover:bg-yellow-100';
+        } else if (daysAgo <= 4) {
             return 'bg-green-50 border-l-4 border-green-500 hover:bg-green-100';
         } else {
             return 'bg-red-50 border-l-4 border-red-500 hover:bg-red-100';
         }
     };
 
-    const getDotColor = (daysAgo) => {
+    const getDotColor = (hasNoPurchase, daysAgo) => {
+        if (hasNoPurchase) return 'bg-yellow-500';
         return daysAgo <= 4 ? 'bg-green-500' : 'bg-red-500';
     };
+
+    // Create sorted customer list with purchase info
+    const sortedCustomers = useMemo(() => {
+        return customers.map(c => {
+            const purchase = lastPurchases[c.id];
+            return {
+                ...c,
+                purchase,
+                daysAgo: purchase ? getDaysAgo(purchase.date) : Infinity,
+                hasNoPurchase: !purchase
+            };
+        }).sort((a, b) => b.daysAgo - a.daysAgo); // Sort by days ago descending (longest time first)
+    }, [customers, lastPurchases]);
 
     return (
         <div className="space-y-6 pb-20">
@@ -48,7 +64,7 @@ const LastBuy = ({ onNavigateBack }) => {
             </div>
 
             {/* Legend */}
-            <div className="bg-white p-3 rounded-lg shadow-sm flex gap-4 text-sm">
+            <div className="bg-white p-3 rounded-lg shadow-sm flex flex-wrap gap-4 text-sm">
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-green-500"></div>
                     <span className="text-gray-600">Bought within 4 days</span>
@@ -57,27 +73,28 @@ const LastBuy = ({ onNavigateBack }) => {
                     <div className="w-3 h-3 rounded-full bg-red-500"></div>
                     <span className="text-gray-600">No purchase for 4+ days</span>
                 </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <span className="text-gray-600">Not yet buy</span>
+                </div>
             </div>
 
             <div className="grid gap-3">
-                {customers.map(c => {
-                    const purchase = lastPurchases[c.id];
-                    if (!purchase) return null;
-
-                    const daysAgo = getDaysAgo(purchase.date);
+                {sortedCustomers.map(c => {
+                    const { purchase, daysAgo, hasNoPurchase } = c;
                     const isExpanded = expandedCustomerId === c.id;
 
                     return (
                         <div
                             key={c.id}
-                            className={`${getCardStyle(daysAgo)} p-4 rounded-lg shadow-sm transition-all duration-200`}
+                            className={`${getCardStyle(hasNoPurchase, daysAgo)} p-4 rounded-lg shadow-sm transition-all duration-200`}
                         >
                             <button
                                 onClick={() => setExpandedCustomerId(isExpanded ? null : c.id)}
                                 className="w-full flex items-center text-left"
                             >
                                 {/* Status Dot */}
-                                <span className={`h-3 w-3 rounded-full mr-3 flex-shrink-0 ${getDotColor(daysAgo)}`}></span>
+                                <span className={`h-3 w-3 rounded-full mr-3 flex-shrink-0 ${getDotColor(hasNoPurchase, daysAgo)}`}></span>
 
                                 {/* Customer Name */}
                                 <span className="font-semibold text-gray-800 flex-1">{c.name}</span>
@@ -85,18 +102,24 @@ const LastBuy = ({ onNavigateBack }) => {
                                 {/* Date and Days Info */}
                                 <div className="flex items-center gap-2 text-sm">
                                     <div className="text-right">
-                                        <p className="text-gray-700 font-medium">
-                                            {new Date(purchase.date).toLocaleDateString()}
-                                        </p>
-                                        <p className={`text-xs ${daysAgo <= 4 ? 'text-green-600' : 'text-red-600'} font-medium`}>
-                                            {daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`}
-                                        </p>
+                                        {hasNoPurchase ? (
+                                            <p className="text-yellow-600 font-semibold">Not Yet Buy</p>
+                                        ) : (
+                                            <>
+                                                <p className="text-gray-700 font-medium">
+                                                    {new Date(purchase.date).toLocaleDateString()}
+                                                </p>
+                                                <p className={`text-xs ${daysAgo <= 4 ? 'text-green-600' : 'text-red-600'} font-medium`}>
+                                                    {daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`}
+                                                </p>
+                                            </>
+                                        )}
                                     </div>
-                                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    {!hasNoPurchase && (isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />)}
                                 </div>
                             </button>
 
-                            {isExpanded && (
+                            {isExpanded && !hasNoPurchase && (
                                 <div className="mt-3 pt-3 border-t border-gray-300">
                                     <h4 className="font-semibold text-gray-700 mb-2 text-sm">Items Purchased</h4>
                                     <div className="space-y-1">

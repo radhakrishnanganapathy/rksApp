@@ -63,40 +63,43 @@ const Stock = () => {
             {/* Stock List */}
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="divide-y">
-                    {stocks.products.map((item, idx) => (
-                        <div key={idx} className="p-4 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-blue-50 p-2 rounded-full text-blue-600">
-                                    <Package size={20} />
+                    {stocks.products
+                        .slice()
+                        .sort((a, b) => b.qty - a.qty) // Sort by quantity descending
+                        .map((item, idx) => (
+                            <div key={idx} className="p-4 flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-blue-50 p-2 rounded-full text-blue-600">
+                                        <Package size={20} />
+                                    </div>
+                                    <span className="font-medium">{item.name}</span>
                                 </div>
-                                <span className="font-medium">{item.name}</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="text-right">
+                                        <span className={`font-bold ${item.qty < 20 ? 'text-red-600' : 'text-gray-800'}`}>
+                                            {item.qty}
+                                        </span>
+                                        <span className="text-xs text-gray-500 ml-1">kg</span>
+                                    </div>
+                                    <div className="flex gap-1">
+                                        <button
+                                            onClick={() => handleEditStock(item)}
+                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                                            title="Edit Stock"
+                                        >
+                                            <Edit size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteStock(item)}
+                                            className="p-2 text-red-600 hover:bg-red-50 rounded"
+                                            title="Delete Stock"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="text-right">
-                                    <span className={`font-bold ${item.qty < 20 ? 'text-red-600' : 'text-gray-800'}`}>
-                                        {item.qty}
-                                    </span>
-                                    <span className="text-xs text-gray-500 ml-1">kg</span>
-                                </div>
-                                <div className="flex gap-1">
-                                    <button
-                                        onClick={() => handleEditStock(item)}
-                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                                        title="Edit Stock"
-                                    >
-                                        <Edit size={18} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteStock(item)}
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded"
-                                        title="Delete Stock"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                        ))}
                 </div>
             </div>
 
