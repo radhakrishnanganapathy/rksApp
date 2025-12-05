@@ -5,7 +5,10 @@ import { Plus, Trash2, Save, AlertCircle, UserPlus, List, FileText } from 'lucid
 import BillingList from './BillingList';
 
 const Billing = () => {
-    const { customers, items, stocks, addSale, updateSale, sales, addCustomer } = useData();
+    const { customers, products, stocks, addSale, updateSale, sales, addCustomer } = useData();
+
+    // Filter active products for dropdown
+    const activeProducts = products.filter(p => p.active);
 
     const [activeTab, setActiveTab] = useState('new'); // 'new' or 'list'
     const [editingSaleId, setEditingSaleId] = useState(null);
@@ -311,7 +314,7 @@ const Billing = () => {
                                     className="w-full border rounded p-2"
                                 >
                                     <option value="">Select Product</option>
-                                    {items.map(i => <option key={i} value={i}>{i}</option>)}
+                                    {activeProducts.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                                 </select>
                             </div>
                             <input

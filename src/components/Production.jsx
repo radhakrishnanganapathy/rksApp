@@ -4,7 +4,7 @@ import { Save, Package, Trash2, Edit2, ArrowLeft, X } from 'lucide-react';
 import { filterByMonthYear } from '../utils';
 
 const Production = ({ onNavigateBack }) => {
-    const { production, addProduction, updateProduction, deleteProduction, stocks } = useData();
+    const { production, addProduction, updateProduction, deleteProduction, stocks, products } = useData();
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [item, setItem] = useState('');
     const [qty, setQty] = useState('');
@@ -18,6 +18,9 @@ const Production = ({ onNavigateBack }) => {
     // --- Filters ---
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    // Filter active products for autocomplete
+    const activeProducts = products.filter(p => p.active);
 
     const resetForm = () => {
         setId(null);
@@ -131,7 +134,7 @@ const Production = ({ onNavigateBack }) => {
                                 list="product-suggestions"
                             />
                             <datalist id="product-suggestions">
-                                {stocks.products.map((p, i) => <option key={i} value={p.name} />)}
+                                {activeProducts.map((p) => <option key={p.id} value={p.name} />)}
                             </datalist>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
