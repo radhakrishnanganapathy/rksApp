@@ -22,13 +22,52 @@ import GestureHandler from './components/GestureHandler';
 import BackupManager from './components/BackupManager';
 import Products from './components/Products';
 
+// Farm Components
+import FarmDashboard from './components/FarmDashboard';
+import FarmExpenses from './components/FarmExpenses';
+import FarmIncome from './components/FarmIncome';
+import FarmMore from './components/FarmMore';
+import Crops from './components/Crops';
+import FarmExpenseCategories from './components/FarmExpenseCategories';
+import Timeline from './components/Timeline';
+
 import { useData } from './context/DataContext';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { loading, sales, orders, production, expenses } = useData();
+  const [businessMode, setBusinessMode] = useState('homesnacks'); // 'homesnacks' or 'farm'
+  const { loading } = useData();
+
+  // Reset to dashboard when switching business modes
+  const handleBusinessModeChange = (mode) => {
+    setBusinessMode(mode);
+    setActiveTab('dashboard');
+  };
 
   const renderContent = () => {
+    // Farm Module
+    if (businessMode === 'farm') {
+      switch (activeTab) {
+        case 'dashboard':
+          return <FarmDashboard />;
+        case 'expenses':
+          return <FarmExpenses onNavigateBack={() => setActiveTab('dashboard')} />;
+        case 'income':
+          return <FarmIncome onNavigateBack={() => setActiveTab('dashboard')} />;
+        case 'more':
+          return <FarmMore onNavigate={setActiveTab} />;
+        case 'crops':
+          return <Crops onNavigateBack={() => setActiveTab('more')} />;
+        case 'timeline':
+          return <Timeline onNavigateBack={() => setActiveTab('more')} />;
+        case 'farm-categories':
+          return <FarmExpenseCategories onNavigateBack={() => setActiveTab('more')} />;
+        default:
+          return <FarmDashboard />;
+      }
+    }
+
+    // HomeSnacks Module (existing)
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard />;
@@ -76,12 +115,26 @@ function App() {
   return (
     <GestureHandler onBack={() => {
       // Simple history back or tab navigation logic
-      if (activeTab !== 'dashboard') {
-        setActiveTab('more'); // Default back behavior for tabs
+      const farmTabs = ['expenses', 'income', 'crops', 'farm-categories'];
+      const homeSnacksTabs = ['production', 'expenses', 'employees', 'customers', 'stats',
+        'analysis', 'lastbuy', 'compare', 'orders', 'balance',
+        'raw-material-prices', 'data-management', 'products'];
+
+      if (businessMode === 'farm' && farmTabs.includes(activeTab)) {
+        setActiveTab('more');
+      } else if (businessMode === 'homesnacks' && homeSnacksTabs.includes(activeTab)) {
+        setActiveTab('more');
+      } else if (activeTab !== 'dashboard') {
+        setActiveTab('dashboard');
       }
     }}>
       <BackupManager />
-      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <Layout
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        businessMode={businessMode}
+        setBusinessMode={handleBusinessModeChange}
+      >
         {renderContent()}
       </Layout>
     </GestureHandler>

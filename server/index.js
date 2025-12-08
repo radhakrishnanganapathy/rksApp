@@ -212,6 +212,177 @@ const initializeTables = async () => {
             console.error('Error checking employee columns:', err.message);
         }
 
+        // ========== FARM MODULE TABLES ==========
+
+        // Farm Crops Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS farm_crops (
+                id BIGINT PRIMARY KEY,
+                crop_name TEXT NOT NULL,
+                crop_type TEXT NOT NULL,
+                acres_used NUMERIC NOT NULL,
+                time_duration INTEGER NOT NULL,
+                duration_unit TEXT DEFAULT 'days',
+                starting_date DATE NOT NULL,
+                estimated_ending_date DATE NOT NULL,
+                auto_calculate_end_date BOOLEAN DEFAULT true,
+                actual_end_date DATE,
+                crop_status TEXT DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Migration: Add new columns if they don't exist
+        try {
+            await db.query(`
+                ALTER TABLE farm_crops 
+                ADD COLUMN IF NOT EXISTS duration_unit TEXT DEFAULT 'days',
+                ADD COLUMN IF NOT EXISTS auto_calculate_end_date BOOLEAN DEFAULT true,
+                ADD COLUMN IF NOT EXISTS actual_end_date DATE;
+            `);
+            console.log('✅ Farm crops columns checked/added.');
+        } catch (err) {
+            console.error('Error adding farm crops columns:', err.message);
+        }
+
+
+        // Farm Expense Categories Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS farm_expense_categories (
+                id BIGINT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Farm Expense Subcategories Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS farm_expense_subcategories (
+                id BIGINT PRIMARY KEY,
+                category_id BIGINT REFERENCES farm_expense_categories(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Farm Expenses Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS farm_expenses (
+                id BIGINT PRIMARY KEY,
+                date DATE NOT NULL,
+                crop_id BIGINT REFERENCES farm_crops(id),
+                category_id BIGINT REFERENCES farm_expense_categories(id),
+                subcategory_id BIGINT REFERENCES farm_expense_subcategories(id),
+                unit TEXT,
+                quantity NUMERIC,
+                male_count INTEGER,
+                female_count INTEGER,
+                amount NUMERIC NOT NULL,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Migration: Add new columns to farm_expenses if they don't exist
+        try {
+            await db.query(`
+                ALTER TABLE farm_expenses 
+                ADD COLUMN IF NOT EXISTS male_count INTEGER,
+                ADD COLUMN IF NOT EXISTS female_count INTEGER,
+                ADD COLUMN IF NOT EXISTS notes TEXT;
+            `);
+
+            // Make unit and quantity nullable
+            await db.query(`
+                ALTER TABLE farm_expenses 
+                ALTER COLUMN unit DROP NOT NULL,
+                ALTER COLUMN quantity DROP NOT NULL;
+            `);
+
+            console.log('✅ Farm expenses columns checked/added.');
+        } catch (err) {
+            console.error('Error updating farm_expenses columns:', err.message);
+        }
+
+        // Farm Income Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS farm_income (
+                id BIGINT PRIMARY KEY,
+                date DATE NOT NULL,
+                crop_id BIGINT REFERENCES farm_crops(id),
+                description TEXT,
+                amount NUMERIC NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Farm Timeline Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS farm_timeline (
+                id BIGINT PRIMARY KEY,
+                crop_id BIGINT REFERENCES farm_crops(id) ON DELETE CASCADE,
+                date DATE NOT NULL,
+                task TEXT NOT NULL,
+                notes TEXT,
+                due_date DATE NOT NULL,
+                priority TEXT DEFAULT 'medium',
+                status TEXT DEFAULT 'todo',
+                done_date DATE,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Migration: Add priority and done_date columns if they don't exist
+        try {
+            await db.query(`
+                ALTER TABLE farm_timeline 
+                ADD COLUMN IF NOT EXISTS priority TEXT DEFAULT 'medium',
+                ADD COLUMN IF NOT EXISTS done_date DATE;
+            `);
+            console.log('✅ Farm timeline columns checked/added.');
+        } catch (err) {
+            console.error('Error adding timeline columns:', err.message);
+        }
+
+        // Insert default farm expense categories if they don't exist
+        try {
+            const categoriesCheck = await db.query('SELECT COUNT(*) FROM farm_expense_categories');
+            if (parseInt(categoriesCheck.rows[0].count) === 0) {
+                console.log('Inserting default farm expense categories...');
+                const defaultCategories = [
+                    { id: Date.now(), name: 'Tillage' },
+                    { id: Date.now() + 1, name: 'Seeds or Plant' },
+                    { id: Date.now() + 2, name: 'Workers' },
+                    { id: Date.now() + 3, name: 'Fertilizer' },
+                    { id: Date.now() + 4, name: 'Maintenance Work' }
+                ];
+
+                for (const cat of defaultCategories) {
+                    await db.query(
+                        'INSERT INTO farm_expense_categories (id, name) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING',
+                        [cat.id, cat.name]
+                    );
+                }
+
+                // Insert default subcategories for Tillage
+                const tillageResult = await db.query('SELECT id FROM farm_expense_categories WHERE name = $1', ['Tillage']);
+                if (tillageResult.rows.length > 0) {
+                    const tillageId = tillageResult.rows[0].id;
+                    await db.query(
+                        'INSERT INTO farm_expense_subcategories (id, category_id, name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+                        [Date.now() + 100, tillageId, 'Cow']
+                    );
+                    await db.query(
+                        'INSERT INTO farm_expense_subcategories (id, category_id, name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+                        [Date.now() + 101, tillageId, 'Tractor']
+                    );
+                }
+                console.log('✅ Default farm expense categories inserted.');
+            }
+        } catch (err) {
+            console.error('Error inserting default farm categories:', err.message);
+        }
+
         console.log('Database tables initialized successfully!');
     } catch (err) {
         console.error('Error initializing database tables:', err);
@@ -1324,6 +1495,419 @@ app.get('/api/backup/sql', async (req, res) => {
         res.send(sqlDump);
     } catch (err) {
         console.error('Backup error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ========== FARM MODULE ENDPOINTS ==========
+
+// --- Farm Crops ---
+app.get('/api/farm/crops', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM farm_crops ORDER BY starting_date DESC');
+        res.json(result.rows.map(row => ({
+            id: row.id,
+            cropName: row.crop_name,
+            cropType: row.crop_type,
+            acresUsed: parseFloat(row.acres_used),
+            timeDuration: parseInt(row.time_duration),
+            durationUnit: row.duration_unit || 'days',
+            startingDate: row.starting_date,
+            estimatedEndingDate: row.estimated_ending_date,
+            autoCalculateEndDate: row.auto_calculate_end_date !== undefined ? row.auto_calculate_end_date : true,
+            actualEndDate: row.actual_end_date || null,
+            cropStatus: row.crop_status
+        })));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/farm/crops', async (req, res) => {
+    const { id, cropName, cropType, acresUsed, timeDuration, durationUnit, startingDate, estimatedEndingDate, autoCalculateEndDate, actualEndDate, cropStatus } = req.body;
+    try {
+        const result = await db.query(
+            `INSERT INTO farm_crops (id, crop_name, crop_type, acres_used, time_duration, duration_unit, starting_date, estimated_ending_date, auto_calculate_end_date, actual_end_date, crop_status) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            [id, cropName, cropType, acresUsed, timeDuration, durationUnit || 'days', startingDate, estimatedEndingDate, autoCalculateEndDate !== undefined ? autoCalculateEndDate : true, actualEndDate || null, cropStatus || 'active']
+        );
+        const row = result.rows[0];
+        res.json({
+            id: row.id,
+            cropName: row.crop_name,
+            cropType: row.crop_type,
+            acresUsed: parseFloat(row.acres_used),
+            timeDuration: parseInt(row.time_duration),
+            durationUnit: row.duration_unit || 'days',
+            startingDate: row.starting_date,
+            estimatedEndingDate: row.estimated_ending_date,
+            autoCalculateEndDate: row.auto_calculate_end_date !== undefined ? row.auto_calculate_end_date : true,
+            actualEndDate: row.actual_end_date || null,
+            cropStatus: row.crop_status
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/farm/crops/:id', async (req, res) => {
+    const { id } = req.params;
+    const { cropName, cropType, acresUsed, timeDuration, durationUnit, startingDate, estimatedEndingDate, autoCalculateEndDate, actualEndDate, cropStatus } = req.body;
+    try {
+        const result = await db.query(
+            `UPDATE farm_crops SET crop_name = $1, crop_type = $2, acres_used = $3, time_duration = $4, 
+             duration_unit = $5, starting_date = $6, estimated_ending_date = $7, auto_calculate_end_date = $8, 
+             actual_end_date = $9, crop_status = $10 WHERE id = $11 RETURNING *`,
+            [cropName, cropType, acresUsed, timeDuration, durationUnit || 'days', startingDate, estimatedEndingDate, autoCalculateEndDate !== undefined ? autoCalculateEndDate : true, actualEndDate || null, cropStatus, id]
+        );
+        const row = result.rows[0];
+        res.json({
+            id: row.id,
+            cropName: row.crop_name,
+            cropType: row.crop_type,
+            acresUsed: parseFloat(row.acres_used),
+            timeDuration: parseInt(row.time_duration),
+            durationUnit: row.duration_unit || 'days',
+            startingDate: row.starting_date,
+            estimatedEndingDate: row.estimated_ending_date,
+            autoCalculateEndDate: row.auto_calculate_end_date !== undefined ? row.auto_calculate_end_date : true,
+            actualEndDate: row.actual_end_date || null,
+            cropStatus: row.crop_status
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/farm/crops/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM farm_crops WHERE id = $1', [id]);
+        res.json({ message: 'Crop deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Farm Expense Categories ---
+app.get('/api/farm/expense-categories', async (req, res) => {
+    try {
+        const categories = await db.query('SELECT * FROM farm_expense_categories ORDER BY name');
+        const subcategories = await db.query('SELECT * FROM farm_expense_subcategories ORDER BY name');
+
+        const result = categories.rows.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            subcategories: subcategories.rows
+                .filter(sub => sub.category_id === cat.id)
+                .map(sub => ({ id: sub.id, name: sub.name }))
+        }));
+
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/farm/expense-categories', async (req, res) => {
+    const { id, name } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO farm_expense_categories (id, name) VALUES ($1, $2) RETURNING *',
+            [id, name]
+        );
+        res.json({ id: result.rows[0].id, name: result.rows[0].name, subcategories: [] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/farm/expense-categories/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name } = req.body;
+    try {
+        const result = await db.query(
+            'UPDATE farm_expense_categories SET name = $1 WHERE id = $2 RETURNING *',
+            [name, id]
+        );
+        res.json({ id: result.rows[0].id, name: result.rows[0].name });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/farm/expense-categories/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM farm_expense_categories WHERE id = $1', [id]);
+        res.json({ message: 'Category deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Farm Expense Subcategories ---
+app.post('/api/farm/expense-subcategories', async (req, res) => {
+    const { id, categoryId, name } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO farm_expense_subcategories (id, category_id, name) VALUES ($1, $2, $3) RETURNING *',
+            [id, categoryId, name]
+        );
+        res.json({ id: result.rows[0].id, name: result.rows[0].name });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/farm/expense-subcategories/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, categoryId } = req.body;
+    try {
+        const result = await db.query(
+            'UPDATE farm_expense_subcategories SET name = $1, category_id = $2 WHERE id = $3 RETURNING *',
+            [name, categoryId, id]
+        );
+        res.json({ id: result.rows[0].id, name: result.rows[0].name });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/farm/expense-subcategories/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM farm_expense_subcategories WHERE id = $1', [id]);
+        res.json({ message: 'Subcategory deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Farm Expenses ---
+app.get('/api/farm/expenses', async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT 
+                fe.*,
+                fc.crop_name,
+                fec.name as category_name,
+                fes.name as subcategory_name
+            FROM farm_expenses fe
+            LEFT JOIN farm_crops fc ON fe.crop_id = fc.id
+            LEFT JOIN farm_expense_categories fec ON fe.category_id = fec.id
+            LEFT JOIN farm_expense_subcategories fes ON fe.subcategory_id = fes.id
+            ORDER BY fe.date DESC
+        `);
+
+        res.json(result.rows.map(row => ({
+            id: row.id,
+            date: row.date,
+            cropId: row.crop_id,
+            cropName: row.crop_name,
+            categoryId: row.category_id,
+            categoryName: row.category_name,
+            subcategoryId: row.subcategory_id,
+            subcategoryName: row.subcategory_name,
+            unit: row.unit,
+            quantity: row.quantity ? parseFloat(row.quantity) : null,
+            maleCount: row.male_count || null,
+            femaleCount: row.female_count || null,
+            amount: parseFloat(row.amount),
+            notes: row.notes || null
+        })));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/farm/expenses', async (req, res) => {
+    const { id, date, cropId, categoryId, subcategoryId, unit, quantity, maleCount, femaleCount, amount, notes } = req.body;
+    try {
+        const result = await db.query(
+            `INSERT INTO farm_expenses (id, date, crop_id, category_id, subcategory_id, unit, quantity, male_count, female_count, amount, notes) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            [id, date, cropId, categoryId, subcategoryId || null, unit || null, quantity || null, maleCount || null, femaleCount || null, amount, notes || null]
+        );
+
+        // Fetch related data
+        const expense = await db.query(`
+            SELECT 
+                fe.*,
+                fc.crop_name,
+                fec.name as category_name,
+                fes.name as subcategory_name
+            FROM farm_expenses fe
+            LEFT JOIN farm_crops fc ON fe.crop_id = fc.id
+            LEFT JOIN farm_expense_categories fec ON fe.category_id = fec.id
+            LEFT JOIN farm_expense_subcategories fes ON fe.subcategory_id = fes.id
+            WHERE fe.id = $1
+        `, [result.rows[0].id]);
+
+        const row = expense.rows[0];
+        res.json({
+            id: row.id,
+            date: row.date,
+            cropId: row.crop_id,
+            cropName: row.crop_name,
+            categoryId: row.category_id,
+            categoryName: row.category_name,
+            subcategoryId: row.subcategory_id,
+            subcategoryName: row.subcategory_name,
+            unit: row.unit,
+            quantity: row.quantity ? parseFloat(row.quantity) : null,
+            maleCount: row.male_count || null,
+            femaleCount: row.female_count || null,
+            amount: parseFloat(row.amount),
+            notes: row.notes || null
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/farm/expenses/:id', async (req, res) => {
+    const { id } = req.params;
+    const { date, cropId, categoryId, subcategoryId, unit, quantity, maleCount, femaleCount, amount, notes } = req.body;
+    try {
+        await db.query(
+            `UPDATE farm_expenses SET date = $1, crop_id = $2, category_id = $3, subcategory_id = $4, 
+             unit = $5, quantity = $6, male_count = $7, female_count = $8, amount = $9, notes = $10 WHERE id = $11`,
+            [date, cropId, categoryId, subcategoryId || null, unit || null, quantity || null, maleCount || null, femaleCount || null, amount, notes || null, id]
+        );
+        res.json({ message: 'Expense updated successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/farm/expenses/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM farm_expenses WHERE id = $1', [id]);
+        res.json({ message: 'Expense deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Farm Income ---
+app.get('/api/farm/income', async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT 
+                fi.*,
+                fc.crop_name
+            FROM farm_income fi
+            LEFT JOIN farm_crops fc ON fi.crop_id = fc.id
+            ORDER BY fi.date DESC
+        `);
+
+        res.json(result.rows.map(row => ({
+            id: row.id,
+            date: row.date,
+            cropId: row.crop_id,
+            cropName: row.crop_name,
+            description: row.description,
+            amount: parseFloat(row.amount)
+        })));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/farm/income', async (req, res) => {
+    const { id, date, cropId, description, amount } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO farm_income (id, date, crop_id, description, amount) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [id, date, cropId || null, description, amount]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/farm/income/:id', async (req, res) => {
+    const { id } = req.params;
+    const { date, cropId, description, amount } = req.body;
+    try {
+        const result = await db.query(
+            'UPDATE farm_income SET date = $1, crop_id = $2, description = $3, amount = $4 WHERE id = $5 RETURNING *',
+            [date, cropId || null, description, amount, id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/farm/income/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM farm_income WHERE id = $1', [id]);
+        res.json({ message: 'Income deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Farm Timeline ---
+app.get('/api/farm/timeline', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM farm_timeline ORDER BY due_date ASC');
+        res.json(result.rows.map(row => ({
+            id: row.id,
+            cropId: row.crop_id,
+            date: row.date,
+            task: row.task,
+            notes: row.notes,
+            dueDate: row.due_date,
+            priority: row.priority || 'medium',
+            status: row.status,
+            doneDate: row.done_date || null
+        })));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/farm/timeline', async (req, res) => {
+    const { id, cropId, date, task, notes, dueDate, priority, status, doneDate } = req.body;
+    try {
+        await db.query(
+            `INSERT INTO farm_timeline (id, crop_id, date, task, notes, due_date, priority, status, done_date) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [id, cropId, date, task, notes || null, dueDate, priority || 'medium', status || 'todo', doneDate || null]
+        );
+        res.json({ message: 'Timeline task added successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/farm/timeline/:id', async (req, res) => {
+    const { id } = req.params;
+    const { cropId, date, task, notes, dueDate, priority, status, doneDate } = req.body;
+    try {
+        await db.query(
+            `UPDATE farm_timeline SET crop_id = $1, date = $2, task = $3, notes = $4, 
+             due_date = $5, priority = $6, status = $7, done_date = $8 WHERE id = $9`,
+            [cropId, date, task, notes || null, dueDate, priority || 'medium', status, doneDate || null, id]
+        );
+        res.json({ message: 'Timeline task updated successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/farm/timeline/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM farm_timeline WHERE id = $1', [id]);
+        res.json({ message: 'Timeline task deleted successfully' });
+    } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
