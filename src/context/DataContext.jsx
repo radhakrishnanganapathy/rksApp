@@ -29,6 +29,7 @@ export const DataProvider = ({ children }) => {
     const [farmIncome, setFarmIncome] = useState([]);
     const [farmExpenseCategories, setFarmExpenseCategories] = useState([]);
     const [farmTimeline, setFarmTimeline] = useState([]);
+    const [cropTypes, setCropTypes] = useState([]); // Crop Master List
 
     // --- Data Mappers (Backend snake_case -> Frontend camelCase) ---
     const mapSale = (s) => ({
@@ -1077,6 +1078,21 @@ export const DataProvider = ({ children }) => {
         }
     };
 
+    // --- Crop Types (Master List) Functions ---
+    const addCropType = (cropType) => {
+        const newCropType = { ...cropType, id: Date.now() };
+        setCropTypes([newCropType, ...cropTypes]);
+        return newCropType;
+    };
+
+    const updateCropType = (id, updatedData) => {
+        setCropTypes(cropTypes.map(ct => ct.id === id ? { ...updatedData, id } : ct));
+    };
+
+    const deleteCropType = (id) => {
+        setCropTypes(cropTypes.filter(ct => ct.id !== id));
+    };
+
 
     return (
         <DataContext.Provider value={{
@@ -1099,6 +1115,7 @@ export const DataProvider = ({ children }) => {
             farmExpenseCategories, addFarmExpenseCategory, updateFarmExpenseCategory, deleteFarmExpenseCategory,
             addFarmExpenseSubcategory, updateFarmExpenseSubcategory, deleteFarmExpenseSubcategory,
             farmTimeline, addFarmTimeline, updateFarmTimeline, deleteFarmTimeline,
+            cropTypes, addCropType, updateCropType, deleteCropType,
             items,
             loading, refreshData
         }}>

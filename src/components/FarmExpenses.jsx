@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Plus, Calendar, DollarSign, Edit2, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Plus, Calendar, DollarSign, Edit2, Trash2, Filter, X } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
 // Farm Expenses Component with Category-Specific Fields
@@ -7,6 +7,27 @@ const FarmExpenses = ({ onNavigateBack }) => {
     const { farmExpenses, farmCrops, farmExpenseCategories, addFarmExpense, updateFarmExpense, deleteFarmExpense, refreshData } = useData();
     const [showForm, setShowForm] = useState(false);
     const [editingExpense, setEditingExpense] = useState(null);
+
+    // Get current month and year for default filter
+    const getCurrentMonthYear = () => {
+        const now = new Date();
+        return {
+            month: now.getMonth() + 1, // 1-12
+            year: now.getFullYear()
+        };
+    };
+
+    // Filter states
+    const [filterType, setFilterType] = useState('month'); // 'all', 'dateRange', 'month', 'crop'
+    const [filters, setFilters] = useState({
+        startDate: '',
+        endDate: '',
+        cropId: '',
+        month: getCurrentMonthYear().month,
+        year: getCurrentMonthYear().year
+    });
+    const [showFilters, setShowFilters] = useState(true);
+
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
         cropId: '',
@@ -16,11 +37,13 @@ const FarmExpenses = ({ onNavigateBack }) => {
         quantity: '',
         maleCount: '',
         femaleCount: '',
+        totalFood: '',
         amount: '',
         notes: ''
     });
 
     const activeCrops = farmCrops?.filter(c => c.cropStatus === 'active') || [];
+    const allCrops = farmCrops || [];
     const categories = farmExpenseCategories || [];
 
     const selectedCategory = categories.find(c => c.id === formData.categoryId);
@@ -57,6 +80,11 @@ const FarmExpenses = ({ onNavigateBack }) => {
         return false;
     };
 
+    // Check if category is Food
+    const isFoodCategory = () => {
+        return categoryName === 'food';
+    };
+
     // Check if category requires unit/quantity
     const requiresUnitQuantity = () => {
         return ['fertilizer', 'seeds or plant', 'tillage'].includes(categoryName) ||
@@ -78,6 +106,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
             quantity: '',
             maleCount: '',
             femaleCount: '',
+            totalFood: '',
             amount: '',
             notes: ''
         });
@@ -98,6 +127,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                 quantity: formData.quantity ? parseFloat(formData.quantity) : null,
                 maleCount: formData.maleCount ? parseInt(formData.maleCount) : null,
                 femaleCount: formData.femaleCount ? parseInt(formData.femaleCount) : null,
+                totalFood: formData.totalFood || null,
                 amount: parseFloat(formData.amount),
                 notes: formData.notes || null
             };
@@ -108,7 +138,6 @@ const FarmExpenses = ({ onNavigateBack }) => {
                 await addFarmExpense(expenseData);
             }
 
-            await refreshData();
             resetForm();
         } catch (error) {
             console.error('Error saving expense:', error);
@@ -135,6 +164,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
             quantity: expense.quantity || '',
             maleCount: expense.maleCount || '',
             femaleCount: expense.femaleCount || '',
+            totalFood: expense.totalFood || '',
             amount: expense.amount,
             notes: expense.notes || ''
         });
@@ -163,6 +193,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
             quantity: '',
             maleCount: '',
             femaleCount: '',
+            totalFood: '',
             notes: ''
         });
     };
@@ -178,8 +209,48 @@ const FarmExpenses = ({ onNavigateBack }) => {
         });
     };
 
+    // Filter expenses based on selected filter type
+    const getFilteredExpenses = () => {
+        let filtered = farmExpenses || [];
+
+        switch (filterType) {
+            case 'dateRange':
+                if (filters.startDate && filters.endDate) {
+                    filtered = filtered.filter(exp => {
+                        const expDate = new Date(exp.date);
+                        const start = new Date(filters.startDate);
+                        const end = new Date(filters.endDate);
+                        return expDate >= start && expDate <= end;
+                    });
+                }
+                break;
+
+            case 'month':
+                filtered = filtered.filter(exp => {
+                    const expDate = new Date(exp.date);
+                    return expDate.getMonth() + 1 === filters.month &&
+                        expDate.getFullYear() === filters.year;
+                });
+                break;
+
+            case 'crop':
+                if (filters.cropId) {
+                    filtered = filtered.filter(exp => exp.cropId === parseInt(filters.cropId));
+                }
+                break;
+
+            case 'all':
+            default:
+                // No filtering
+                break;
+        }
+
+        return filtered;
+    };
+
     // Group expenses by date
-    const groupedExpenses = (farmExpenses || []).reduce((acc, expense) => {
+    const filteredExpenses = getFilteredExpenses();
+    const groupedExpenses = filteredExpenses.reduce((acc, expense) => {
         const date = expense.date;
         if (!acc[date]) acc[date] = [];
         acc[date].push(expense);
@@ -187,6 +258,29 @@ const FarmExpenses = ({ onNavigateBack }) => {
     }, {});
 
     const sortedDates = Object.keys(groupedExpenses).sort((a, b) => new Date(b) - new Date(a));
+
+    // Calculate total for filtered expenses
+    const filteredTotal = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+    // Generate month options
+    const months = [
+        { value: 1, label: 'January' },
+        { value: 2, label: 'February' },
+        { value: 3, label: 'March' },
+        { value: 4, label: 'April' },
+        { value: 5, label: 'May' },
+        { value: 6, label: 'June' },
+        { value: 7, label: 'July' },
+        { value: 8, label: 'August' },
+        { value: 9, label: 'September' },
+        { value: 10, label: 'October' },
+        { value: 11, label: 'November' },
+        { value: 12, label: 'December' }
+    ];
+
+    // Generate year options (current year and 5 years back)
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
     return (
         <div className="pb-4">
@@ -208,6 +302,155 @@ const FarmExpenses = ({ onNavigateBack }) => {
                     <Plus size={20} />
                     Add Expense
                 </button>
+            </div>
+
+            {/* Filters Section */}
+            <div className="bg-white rounded-lg shadow-sm mb-4">
+                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Filter size={20} className="text-gray-600" />
+                        <h3 className="font-semibold text-gray-700">Filters</h3>
+                    </div>
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className="text-gray-500 hover:text-gray-700"
+                    >
+                        {showFilters ? <X size={20} /> : <Filter size={20} />}
+                    </button>
+                </div>
+
+                {showFilters && (
+                    <div className="p-4 space-y-4">
+                        {/* Filter Type Tabs */}
+                        <div className="flex gap-2 flex-wrap">
+                            <button
+                                onClick={() => setFilterType('month')}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'month'
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                            >
+                                Month/Year
+                            </button>
+                            <button
+                                onClick={() => setFilterType('dateRange')}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'dateRange'
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                            >
+                                Date Range
+                            </button>
+                            <button
+                                onClick={() => setFilterType('crop')}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'crop'
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                            >
+                                By Crop
+                            </button>
+                            <button
+                                onClick={() => setFilterType('all')}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'all'
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                            >
+                                All
+                            </button>
+                        </div>
+
+                        {/* Filter Controls */}
+                        {filterType === 'dateRange' && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        From Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={filters.startDate}
+                                        onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        To Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={filters.endDate}
+                                        onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {filterType === 'month' && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Month
+                                    </label>
+                                    <select
+                                        value={filters.month}
+                                        onChange={(e) => setFilters({ ...filters, month: parseInt(e.target.value) })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    >
+                                        {months.map(m => (
+                                            <option key={m.value} value={m.value}>{m.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Year
+                                    </label>
+                                    <select
+                                        value={filters.year}
+                                        onChange={(e) => setFilters({ ...filters, year: parseInt(e.target.value) })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    >
+                                        {years.map(y => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
+                        {filterType === 'crop' && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Select Crop
+                                </label>
+                                <select
+                                    value={filters.cropId}
+                                    onChange={(e) => setFilters({ ...filters, cropId: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                >
+                                    <option value="">All Crops</option>
+                                    {allCrops.map(crop => (
+                                        <option key={crop.id} value={crop.id}>{crop.cropName}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* Filter Summary */}
+                        <div className="pt-3 border-t border-gray-200 flex items-center justify-between">
+                            <div className="text-sm text-gray-600">
+                                Showing <span className="font-semibold text-gray-800">{filteredExpenses.length}</span> expenses
+                            </div>
+                            <div className="text-sm font-semibold text-red-600">
+                                Total: ₹{filteredTotal.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Form Modal */}
@@ -270,8 +513,8 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                 </select>
                             </div>
 
-                            {/* Subcategory */}
-                            {subcategories.length > 0 && (
+                            {/* Subcategory - Hide for Workers category */}
+                            {subcategories.length > 0 && categoryName !== 'workers' && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         {categoryName === 'fertilizer' && 'Fertilizer Name *'}
@@ -370,6 +613,23 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                         Enter at least one count (male or female)
                                     </p>
                                 </>
+                            )}
+
+                            {/* Food Category Fields */}
+                            {isFoodCategory() && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Total Food *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.totalFood}
+                                        onChange={(e) => setFormData({ ...formData, totalFood: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                        placeholder="Enter total food details"
+                                    />
+                                </div>
                             )}
 
                             {/* Amount */}
@@ -493,6 +753,9 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                                         {expense.maleCount > 0 && ` Male: ${expense.maleCount}`}
                                                         {expense.femaleCount > 0 && ` Female: ${expense.femaleCount}`}
                                                     </p>
+                                                )}
+                                                {expense.totalFood && (
+                                                    <p>Total Food: {expense.totalFood}</p>
                                                 )}
                                                 {expense.notes && (
                                                     <p className="italic">Note: {expense.notes}</p>

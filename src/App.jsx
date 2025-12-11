@@ -27,7 +27,9 @@ import FarmDashboard from './components/FarmDashboard';
 import FarmExpenses from './components/FarmExpenses';
 import FarmIncome from './components/FarmIncome';
 import FarmMore from './components/FarmMore';
-import Crops from './components/Crops';
+import Cultivation from './components/Cultivation';
+import Harvesting from './components/Harvesting';
+import CropMaster from './components/CropMaster';
 import FarmExpenseCategories from './components/FarmExpenseCategories';
 import Timeline from './components/Timeline';
 
@@ -56,8 +58,12 @@ function App() {
           return <FarmIncome onNavigateBack={() => setActiveTab('dashboard')} />;
         case 'more':
           return <FarmMore onNavigate={setActiveTab} />;
-        case 'crops':
-          return <Crops onNavigateBack={() => setActiveTab('more')} />;
+        case 'cultivation':
+          return <Cultivation onNavigateBack={() => setActiveTab('more')} />;
+        case 'harvesting':
+          return <Harvesting onNavigateBack={() => setActiveTab('more')} />;
+        case 'crop-master':
+          return <CropMaster onNavigateBack={() => setActiveTab('more')} />;
         case 'timeline':
           return <Timeline onNavigateBack={() => setActiveTab('more')} />;
         case 'farm-categories':
@@ -115,7 +121,7 @@ function App() {
   return (
     <GestureHandler onBack={() => {
       // Simple history back or tab navigation logic
-      const farmTabs = ['expenses', 'income', 'crops', 'farm-categories'];
+      const farmTabs = ['expenses', 'income', 'cultivation', 'harvesting', 'crop-master', 'timeline', 'farm-categories'];
       const homeSnacksTabs = ['production', 'expenses', 'employees', 'customers', 'stats',
         'analysis', 'lastbuy', 'compare', 'orders', 'balance',
         'raw-material-prices', 'data-management', 'products'];

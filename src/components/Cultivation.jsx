@@ -2,14 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Edit2, Trash2, Calendar, MapPin } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
-const Crops = ({ onNavigateBack }) => {
-    const { farmCrops, addFarmCrop, updateFarmCrop, deleteFarmCrop } = useData();
+const Cultivation = ({ onNavigateBack }) => {
+    const { farmCrops, addFarmCrop, updateFarmCrop, deleteFarmCrop, cropTypes } = useData();
     const [showForm, setShowForm] = useState(false);
     const [editingCrop, setEditingCrop] = useState(null);
+
     const [formData, setFormData] = useState({
         cropName: '',
         cropType: '',
+        batchNumber: '', // Auto-generated batch number
         acresUsed: '',
+        totalQuantity: '', // Total quantity cultivated
+        quantityUnit: 'kg', // Unit for quantity
         timeDuration: '',
         durationUnit: 'days', // days, months, years
         startingDate: '',
@@ -18,6 +22,61 @@ const Crops = ({ onNavigateBack }) => {
         actualEndDate: '', // Actual completion date
         cropStatus: 'active'
     });
+
+    // Generate batch number for cultivation
+    const generateBatchNumber = (cropName) => {
+        if (!cropName) return '';
+
+        const year = new Date().getFullYear();
+        const cropPrefix = cropName.toUpperCase().replace(/\s+/g, '-');
+
+        // Find existing batches for this crop in current year
+        const existingBatches = farmCrops?.filter(crop => {
+            const batchYear = crop.batchNumber?.split('-')[1];
+            const batchCrop = crop.batchNumber?.split('-')[0];
+            return batchCrop === cropPrefix && batchYear === year.toString();
+        }) || [];
+
+        const sequenceNumber = (existingBatches.length + 1).toString().padStart(2, '0');
+        return `${cropPrefix}-${year}-${sequenceNumber}`;
+    };
+
+    // Handle crop type selection
+    const handleCropTypeSelection = (cropTypeName) => {
+        const selectedCropType = cropTypes.find(ct => ct.name === cropTypeName);
+        if (selectedCropType) {
+            const batchNum = generateBatchNumber(selectedCropType.name);
+            setFormData(prev => ({
+                ...prev,
+                cropName: selectedCropType.name,
+                cropType: selectedCropType.category,
+                batchNumber: batchNum,
+                timeDuration: selectedCropType.duration.toString(),
+                durationUnit: selectedCropType.durationUnit
+            }));
+        } else if (cropTypeName && cropTypeName !== 'Other') {
+            // If custom crop name entered
+            const batchNum = generateBatchNumber(cropTypeName);
+            setFormData(prev => ({
+                ...prev,
+                cropName: cropTypeName,
+                batchNumber: batchNum,
+                cropType: '',
+                timeDuration: '',
+                durationUnit: 'months'
+            }));
+        } else {
+            // If "Other" selected, clear batch number until name is entered
+            setFormData(prev => ({
+                ...prev,
+                cropName: cropTypeName,
+                batchNumber: '',
+                cropType: '',
+                timeDuration: '',
+                durationUnit: 'months'
+            }));
+        }
+    };
 
     // Calculate estimated end date based on start date and duration
     const calculateEstimatedEndDate = (startDate, duration, unit) => {
@@ -65,7 +124,10 @@ const Crops = ({ onNavigateBack }) => {
         setFormData({
             cropName: '',
             cropType: '',
+            batchNumber: '',
             acresUsed: '',
+            totalQuantity: '',
+            quantityUnit: 'kg',
             timeDuration: '',
             durationUnit: 'days',
             startingDate: '',
@@ -84,6 +146,7 @@ const Crops = ({ onNavigateBack }) => {
         const cropData = {
             ...formData,
             acresUsed: parseFloat(formData.acresUsed),
+            totalQuantity: formData.totalQuantity ? parseFloat(formData.totalQuantity) : null,
             timeDuration: parseInt(formData.timeDuration),
             durationUnit: formData.durationUnit // Explicitly include durationUnit
         };
@@ -102,7 +165,10 @@ const Crops = ({ onNavigateBack }) => {
         setFormData({
             cropName: crop.cropName,
             cropType: crop.cropType,
+            batchNumber: crop.batchNumber || generateBatchNumber(crop.cropName),
             acresUsed: crop.acresUsed.toString(),
+            totalQuantity: crop.totalQuantity ? crop.totalQuantity.toString() : '',
+            quantityUnit: crop.quantityUnit || 'kg',
             timeDuration: crop.timeDuration.toString(),
             durationUnit: crop.durationUnit || 'days',
             startingDate: crop.startingDate,
@@ -134,7 +200,7 @@ const Crops = ({ onNavigateBack }) => {
                     >
                         <ArrowLeft size={24} />
                     </button>
-                    <h2 className="text-2xl font-bold text-gray-800">Crops</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">Cultivation</h2>
                 </div>
                 <button
                     onClick={() => setShowForm(true)}
@@ -153,23 +219,78 @@ const Crops = ({ onNavigateBack }) => {
                             {editingCrop ? 'Edit Crop' : 'Add New Crop'}
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Warning if no crop types defined */}
+                            {cropTypes.length === 0 && (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                                    <p className="text-sm text-yellow-800 font-medium mb-2">
+                                        ⚠️ No crop types defined in Crop Master List
+                                    </p>
+                                    <p className="text-xs text-yellow-700 mb-2">
+                                        Please add crop types in the Crop Master List first for better management.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            resetForm();
+                                            // Navigate to crop master - you'll need to pass this function from parent
+                                            window.location.hash = '#crop-master';
+                                        }}
+                                        className="text-xs bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700"
+                                    >
+                                        Go to Crop Master List
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Crop Name - Dropdown from Crop Master or Manual Entry */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Crop Name *
                                 </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.cropName}
-                                    onChange={(e) => setFormData({ ...formData, cropName: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                    placeholder="e.g., Rice, Wheat, Corn"
-                                />
+                                {cropTypes.length > 0 ? (
+                                    <>
+                                        <select
+                                            required
+                                            value={formData.cropName}
+                                            onChange={(e) => handleCropTypeSelection(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                        >
+                                            <option value="">Select Crop Type</option>
+                                            {cropTypes.map(ct => (
+                                                <option key={ct.id} value={ct.name}>{ct.name}</option>
+                                            ))}
+                                            <option value="Other">Other (Custom)</option>
+                                        </select>
+                                        {formData.cropName === 'Other' && (
+                                            <input
+                                                type="text"
+                                                required
+                                                value={formData.cropName === 'Other' ? '' : formData.cropName}
+                                                onChange={(e) => setFormData({ ...formData, cropName: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent mt-2"
+                                                placeholder="Enter custom crop name"
+                                            />
+                                        )}
+                                    </>
+                                ) : (
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.cropName}
+                                        onChange={(e) => setFormData({ ...formData, cropName: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                        placeholder="e.g., Paddy, Wheat, Sugarcane"
+                                    />
+                                )}
                             </div>
 
+                            {/* Crop Type/Category - Auto-populated but editable */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Crop Type *
+                                    Crop Category *
+                                    {cropTypes.length > 0 && (
+                                        <span className="text-xs text-gray-500 ml-2">(Auto-filled, editable)</span>
+                                    )}
                                 </label>
                                 <input
                                     type="text"
@@ -177,9 +298,25 @@ const Crops = ({ onNavigateBack }) => {
                                     value={formData.cropType}
                                     onChange={(e) => setFormData({ ...formData, cropType: e.target.value })}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                    placeholder="e.g., Cereal, Vegetable, Fruit"
+                                    placeholder="e.g., Grain Crops, Vegetables, Fruits"
                                 />
                             </div>
+
+                            {/* Batch Number - Auto-generated, read-only */}
+                            {formData.batchNumber && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Batch Number
+                                        <span className="text-xs text-gray-500 ml-2">(Auto-generated)</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.batchNumber}
+                                        readOnly
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-mono"
+                                    />
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -194,6 +331,39 @@ const Crops = ({ onNavigateBack }) => {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     placeholder="e.g., 5.5"
                                 />
+                            </div>
+
+                            {/* Total Quantity Cultivated */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Total Quantity Cultivated (Optional)
+                                </label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.totalQuantity}
+                                        onChange={(e) => setFormData({ ...formData, totalQuantity: e.target.value })}
+                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                        placeholder="e.g., 1000"
+                                    />
+                                    <select
+                                        value={formData.quantityUnit}
+                                        onChange={(e) => setFormData({ ...formData, quantityUnit: e.target.value })}
+                                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                                    >
+                                        <option value="kg">kg</option>
+                                        <option value="ton">ton</option>
+                                        <option value="quintal">quintal</option>
+                                        <option value="count">count</option>
+                                        <option value="bunch">bunch</option>
+                                        <option value="dozen">dozen</option>
+                                        <option value="piece">piece</option>
+                                    </select>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Expected total harvest quantity for this cultivation
+                                </p>
                             </div>
 
                             <div>
@@ -255,8 +425,8 @@ const Crops = ({ onNavigateBack }) => {
                                     value={formData.estimatedEndingDate}
                                     onChange={(e) => setFormData({ ...formData, estimatedEndingDate: e.target.value })}
                                     disabled={formData.autoCalculateEndDate}
-                                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${formData.autoCalculateEndDate ? 'bg-gray-100 cursor-not-allowed' : ''
-                                        }`}
+                                    className={`w - full px - 3 py - 2 border border - gray - 300 rounded - lg focus: ring - 2 focus: ring - green - 500 focus: border - transparent ${formData.autoCalculateEndDate ? 'bg-gray-100 cursor-not-allowed' : ''
+                                        } `}
                                 />
                                 {formData.autoCalculateEndDate && (
                                     <p className="text-xs text-gray-500 mt-1">
@@ -331,6 +501,9 @@ const Crops = ({ onNavigateBack }) => {
                                 <div className="flex justify-between items-start mb-3">
                                     <div>
                                         <h4 className="font-semibold text-lg text-gray-800">{crop.cropName}</h4>
+                                        {crop.batchNumber && (
+                                            <p className="text-xs text-gray-500 font-mono mb-1">Batch: {crop.batchNumber}</p>
+                                        )}
                                         <p className="text-sm text-gray-600">{crop.cropType}</p>
                                     </div>
                                     <div className="flex gap-2">
@@ -363,6 +536,11 @@ const Crops = ({ onNavigateBack }) => {
                                     <div className="col-span-2 text-gray-600">
                                         <span className="font-medium">Est. End:</span> {new Date(crop.estimatedEndingDate).toLocaleDateString()}
                                     </div>
+                                    {crop.totalQuantity && (
+                                        <div className="col-span-2 text-gray-600 bg-green-50 p-2 rounded">
+                                            <span className="font-medium">Total Quantity:</span> {crop.totalQuantity} {crop.quantityUnit}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -405,4 +583,4 @@ const Crops = ({ onNavigateBack }) => {
     );
 };
 
-export default Crops;
+export default Cultivation;

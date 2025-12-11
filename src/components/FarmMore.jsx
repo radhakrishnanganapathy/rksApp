@@ -1,14 +1,28 @@
 import React from 'react';
-import { Sprout, Settings, Clock } from 'lucide-react';
+import { Sprout, Settings, Clock, List, Scissors } from 'lucide-react';
 
 const FarmMore = ({ onNavigate }) => {
     const menuItems = [
         {
-            id: 'crops',
-            title: 'Crops',
+            id: 'cultivation',
+            title: 'Cultivation',
             description: 'Manage your crops',
             icon: Sprout,
             color: 'bg-green-500',
+        },
+        {
+            id: 'harvesting',
+            title: 'Harvesting',
+            description: 'Record harvest data',
+            icon: Scissors,
+            color: 'bg-amber-500',
+        },
+        {
+            id: 'crop-master',
+            title: 'Crop Master List',
+            description: 'Define crop types & characteristics',
+            icon: List,
+            color: 'bg-teal-500',
         },
         {
             id: 'timeline',

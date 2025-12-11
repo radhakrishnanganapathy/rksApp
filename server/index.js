@@ -289,6 +289,7 @@ const initializeTables = async () => {
                 ALTER TABLE farm_expenses 
                 ADD COLUMN IF NOT EXISTS male_count INTEGER,
                 ADD COLUMN IF NOT EXISTS female_count INTEGER,
+                ADD COLUMN IF NOT EXISTS total_food TEXT,
                 ADD COLUMN IF NOT EXISTS notes TEXT;
             `);
 
@@ -1713,6 +1714,7 @@ app.get('/api/farm/expenses', async (req, res) => {
             quantity: row.quantity ? parseFloat(row.quantity) : null,
             maleCount: row.male_count || null,
             femaleCount: row.female_count || null,
+            totalFood: row.total_food || null,
             amount: parseFloat(row.amount),
             notes: row.notes || null
         })));
@@ -1722,12 +1724,12 @@ app.get('/api/farm/expenses', async (req, res) => {
 });
 
 app.post('/api/farm/expenses', async (req, res) => {
-    const { id, date, cropId, categoryId, subcategoryId, unit, quantity, maleCount, femaleCount, amount, notes } = req.body;
+    const { id, date, cropId, categoryId, subcategoryId, unit, quantity, maleCount, femaleCount, totalFood, amount, notes } = req.body;
     try {
         const result = await db.query(
-            `INSERT INTO farm_expenses (id, date, crop_id, category_id, subcategory_id, unit, quantity, male_count, female_count, amount, notes) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-            [id, date, cropId, categoryId, subcategoryId || null, unit || null, quantity || null, maleCount || null, femaleCount || null, amount, notes || null]
+            `INSERT INTO farm_expenses (id, date, crop_id, category_id, subcategory_id, unit, quantity, male_count, female_count, total_food, amount, notes) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+            [id, date, cropId, categoryId, subcategoryId || null, unit || null, quantity || null, maleCount || null, femaleCount || null, totalFood || null, amount, notes || null]
         );
 
         // Fetch related data
@@ -1758,6 +1760,7 @@ app.post('/api/farm/expenses', async (req, res) => {
             quantity: row.quantity ? parseFloat(row.quantity) : null,
             maleCount: row.male_count || null,
             femaleCount: row.female_count || null,
+            totalFood: row.total_food || null,
             amount: parseFloat(row.amount),
             notes: row.notes || null
         });
@@ -1768,12 +1771,12 @@ app.post('/api/farm/expenses', async (req, res) => {
 
 app.put('/api/farm/expenses/:id', async (req, res) => {
     const { id } = req.params;
-    const { date, cropId, categoryId, subcategoryId, unit, quantity, maleCount, femaleCount, amount, notes } = req.body;
+    const { date, cropId, categoryId, subcategoryId, unit, quantity, maleCount, femaleCount, totalFood, amount, notes } = req.body;
     try {
         await db.query(
             `UPDATE farm_expenses SET date = $1, crop_id = $2, category_id = $3, subcategory_id = $4, 
-             unit = $5, quantity = $6, male_count = $7, female_count = $8, amount = $9, notes = $10 WHERE id = $11`,
-            [date, cropId, categoryId, subcategoryId || null, unit || null, quantity || null, maleCount || null, femaleCount || null, amount, notes || null, id]
+             unit = $5, quantity = $6, male_count = $7, female_count = $8, total_food = $9, amount = $10, notes = $11 WHERE id = $12`,
+            [date, cropId, categoryId, subcategoryId || null, unit || null, quantity || null, maleCount || null, femaleCount || null, totalFood || null, amount, notes || null, id]
         );
         res.json({ message: 'Expense updated successfully' });
     } catch (err) {
