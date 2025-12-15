@@ -16,8 +16,8 @@ const Layout = ({ children, activeTab, setActiveTab, businessMode, setBusinessMo
                         <button
                             onClick={() => setBusinessMode('homesnacks')}
                             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${businessMode === 'homesnacks'
-                                    ? 'bg-white text-primary-600 border-b-2 border-white'
-                                    : 'text-primary-100 hover:text-white hover:bg-primary-500'
+                                ? 'bg-white text-primary-600 border-b-2 border-white'
+                                : 'text-primary-100 hover:text-white hover:bg-primary-500'
                                 }`}
                         >
                             HomeSnacks
@@ -25,11 +25,20 @@ const Layout = ({ children, activeTab, setActiveTab, businessMode, setBusinessMo
                         <button
                             onClick={() => setBusinessMode('farm')}
                             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${businessMode === 'farm'
-                                    ? 'bg-white text-primary-600 border-b-2 border-white'
-                                    : 'text-primary-100 hover:text-white hover:bg-primary-500'
+                                ? 'bg-white text-primary-600 border-b-2 border-white'
+                                : 'text-primary-100 hover:text-white hover:bg-primary-500'
                                 }`}
                         >
                             Farm
+                        </button>
+                        <button
+                            onClick={() => setBusinessMode('home')}
+                            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${businessMode === 'home'
+                                ? 'bg-white text-primary-600 border-b-2 border-white'
+                                : 'text-primary-100 hover:text-white hover:bg-primary-500'
+                                }`}
+                        >
+                            Home
                         </button>
                     </div>
                 </div>

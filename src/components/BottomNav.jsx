@@ -18,7 +18,22 @@ const BottomNav = ({ activeTab, setActiveTab, businessMode }) => {
         { id: 'more', icon: Menu, label: 'More' },
     ];
 
-    const navItems = businessMode === 'farm' ? farmItems : homeSnacksItems;
+    // Home (Personal) navigation items
+    const homeItems = [
+        { id: 'dashboard', icon: LayoutDashboard, label: 'Home' },
+        { id: 'income', icon: TrendingUp, label: 'Income' },
+        { id: 'expenses', icon: TrendingDown, label: 'Expenses' },
+        { id: 'more', icon: Menu, label: 'More' },
+    ];
+
+    let navItems;
+    if (businessMode === 'farm') {
+        navItems = farmItems;
+    } else if (businessMode === 'home') {
+        navItems = homeItems;
+    } else {
+        navItems = homeSnacksItems;
+    }
 
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 flex justify-between items-center z-50">

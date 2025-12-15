@@ -33,6 +33,13 @@ import Harvesting from './components/Harvesting';
 import CropMaster from './components/CropMaster';
 import FarmExpenseCategories from './components/FarmExpenseCategories';
 import Timeline from './components/Timeline';
+// Home Components
+import HomeDashboard from './components/Home/HomeDashboard';
+import HomeIncome from './components/Home/HomeIncome';
+import HomeExpenses from './components/Home/HomeExpenses';
+import HomeMore from './components/Home/HomeMore';
+import HomeExpenseMaster from './components/Home/HomeExpenseMaster';
+import HomeLoans from './components/Home/HomeLoans';
 
 import { useData } from './context/DataContext';
 
@@ -71,6 +78,26 @@ function App() {
           return <FarmExpenseCategories onNavigateBack={() => setActiveTab('more')} />;
         default:
           return <FarmDashboard />;
+      }
+    }
+
+    // Home Module (Personal Finance)
+    if (businessMode === 'home') {
+      switch (activeTab) {
+        case 'dashboard':
+          return <HomeDashboard />;
+        case 'income':
+          return <HomeIncome onNavigateBack={() => setActiveTab('dashboard')} />;
+        case 'expenses':
+          return <HomeExpenses onNavigateBack={() => setActiveTab('dashboard')} />;
+        case 'expense-master':
+          return <HomeExpenseMaster onNavigateBack={() => setActiveTab('more')} />;
+        case 'loans':
+          return <HomeLoans onNavigateBack={() => setActiveTab('more')} />;
+        case 'more':
+          return <HomeMore onNavigate={setActiveTab} />;
+        default:
+          return <HomeDashboard />;
       }
     }
 
@@ -128,8 +155,11 @@ function App() {
       const homeSnacksTabs = ['production', 'expenses', 'employees', 'customers', 'stats',
         'analysis', 'lastbuy', 'compare', 'orders', 'balance',
         'raw-material-prices', 'data-management', 'products', 'previous-month-stock'];
+      const homeTabs = ['income', 'expenses', 'expense-master', 'loans'];
 
       if (businessMode === 'farm' && farmTabs.includes(activeTab)) {
+        setActiveTab('more');
+      } else if (businessMode === 'home' && homeTabs.includes(activeTab)) {
         setActiveTab('more');
       } else if (businessMode === 'homesnacks' && homeSnacksTabs.includes(activeTab)) {
         setActiveTab('more');

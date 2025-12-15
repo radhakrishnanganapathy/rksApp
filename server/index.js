@@ -414,6 +414,205 @@ const initializeTables = async () => {
             );
         `);
 
+        // ========== HOME MODULE TABLES (Personal Finance) ==========
+
+        // Home Income Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS home_income (
+                id BIGINT PRIMARY KEY,
+                date DATE NOT NULL,
+                description TEXT,
+                amount NUMERIC NOT NULL,
+                category TEXT DEFAULT 'Salary',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Home Expenses Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS home_expenses (
+                id BIGINT PRIMARY KEY,
+                date DATE NOT NULL,
+                description TEXT,
+                amount NUMERIC NOT NULL,
+                category TEXT DEFAULT 'Other',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Home Expense Items Master Table (for Dropdown)
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS home_expense_items (
+                id BIGINT PRIMARY KEY,
+                category TEXT NOT NULL,
+                name TEXT NOT NULL,
+                type TEXT DEFAULT 'expense',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Home Loans Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS home_loans (
+                id BIGINT PRIMARY KEY,
+                name TEXT NOT NULL,
+                loan_type TEXT NOT NULL, -- 'emi', 'interest', 'gold'
+                principal_amount NUMERIC NOT NULL,
+                current_balance NUMERIC NOT NULL,
+                interest_rate NUMERIC NOT NULL, -- monthly percentage (paisa)
+                start_date DATE NOT NULL,
+                status TEXT DEFAULT 'active', -- 'active', 'closed'
+                emi_amount NUMERIC DEFAULT 0,
+                due_date INTEGER, -- Day of the month (1-31)
+                closing_date DATE,
+                account_number TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Add new columns if they don't exist (migration)
+        try {
+            await db.query(`ALTER TABLE home_loans ADD COLUMN IF NOT EXISTS emi_amount NUMERIC DEFAULT 0`);
+            await db.query(`ALTER TABLE home_loans ADD COLUMN IF NOT EXISTS due_date INTEGER`);
+            await db.query(`ALTER TABLE home_loans ADD COLUMN IF NOT EXISTS closing_date DATE`);
+            await db.query(`ALTER TABLE home_loans ADD COLUMN IF NOT EXISTS account_number TEXT`);
+        } catch (err) {
+            console.log('Error adding columns to home_loans:', err.message);
+        }
+
+        // Home Loan Transactions Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS home_loan_transactions (
+                id BIGINT PRIMARY KEY,
+                loan_id BIGINT REFERENCES home_loans(id) ON DELETE CASCADE,
+                date DATE NOT NULL,
+                amount NUMERIC NOT NULL,
+                type TEXT NOT NULL, -- 'emi', 'principal', 'interest'
+                description TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Add type column if it doesn't exist (migration)
+        try {
+            await db.query(`ALTER TABLE home_expense_items ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'expense'`);
+        } catch (err) {
+            console.log('Column type already exists or error adding it:', err.message);
+        }
+
+        // Seed Home Expense Items if empty
+        try {
+            const expenseItemsCheck = await db.query('SELECT COUNT(*) FROM home_expense_items');
+            if (parseInt(expenseItemsCheck.rows[0].count) === 0) {
+                console.log('Seeding default home expense items...');
+                const defaultItems = [
+                    // 1. Loans & EMIs
+                    { cat: 'Loans & EMIs', name: 'Bank Loan EMI', type: 'expense' },
+                    { cat: 'Loans & EMIs', name: 'Private Finance EMI', type: 'expense' },
+                    { cat: 'Loans & EMIs', name: 'Credit / Personal Loan', type: 'expense' },
+                    { cat: 'Loans & EMIs', name: 'Other EMIs', type: 'expense' },
+                    // ... (I'll just add type: 'expense' to all existing ones in logic)
+                ];
+                // Actually, I'll just use the previous list and map it.
+                // But since I'm replacing the block, I need to provide the content.
+                // I'll stick to the previous list but add type: 'expense' to the insert query.
+
+                const defaultExpenseItems = [
+                    // 1. Loans & EMIs
+                    { cat: 'Loans & EMIs', name: 'Bank Loan EMI' },
+                    { cat: 'Loans & EMIs', name: 'Private Finance EMI' },
+                    { cat: 'Loans & EMIs', name: 'Credit / Personal Loan' },
+                    { cat: 'Loans & EMIs', name: 'Other EMIs' },
+                    // 2. Utilities & Bills
+                    { cat: 'Utilities & Bills', name: 'Milk' },
+                    { cat: 'Utilities & Bills', name: 'TV Cable' },
+                    { cat: 'Utilities & Bills', name: 'Internet / WiFi' },
+                    { cat: 'Utilities & Bills', name: 'Electricity Bill (EB)' },
+                    { cat: 'Utilities & Bills', name: 'Gas Cylinder' },
+                    // 3. Transportation
+                    { cat: 'Transportation', name: 'Petrol – TVS XL' },
+                    { cat: 'Transportation', name: 'Petrol – TVS Ntorq' },
+                    { cat: 'Transportation', name: 'Petrol – Passion Pro' },
+                    { cat: 'Transportation', name: 'Public Transport' },
+                    // 4. Maintenance
+                    { cat: 'Maintenance', name: 'Bike Service' },
+                    { cat: 'Maintenance', name: 'Home Maintenance' },
+                    { cat: 'Maintenance', name: 'Repairs' },
+                    { cat: 'Maintenance', name: 'Accessories / Spare Parts' },
+                    // 5. Food (Home)
+                    { cat: 'Food (Home)', name: 'Vegetables' },
+                    { cat: 'Food (Home)', name: 'Fruits' },
+                    { cat: 'Food (Home)', name: 'Fish' },
+                    { cat: 'Food (Home)', name: 'Chicken' },
+                    { cat: 'Food (Home)', name: 'Prawn' },
+                    { cat: 'Food (Home)', name: 'Other Non-Veg' },
+                    // 6. Food (Outside)
+                    { cat: 'Food (Outside)', name: 'Fast Food' },
+                    { cat: 'Food (Outside)', name: 'Fried Rice' },
+                    { cat: 'Food (Outside)', name: 'Parotta' },
+                    { cat: 'Food (Outside)', name: 'Biryani' },
+                    { cat: 'Food (Outside)', name: 'Pizza' },
+                    { cat: 'Food (Outside)', name: 'Street Food' },
+                    { cat: 'Food (Outside)', name: 'Pani Puri' },
+                    { cat: 'Food (Outside)', name: 'Bajji' },
+                    { cat: 'Food (Outside)', name: 'Bonda' },
+                    { cat: 'Food (Outside)', name: 'Snacks (Packed Items)' },
+                    // 7. Shopping & Lifestyle
+                    { cat: 'Shopping & Lifestyle', name: 'Dress / Clothing' },
+                    { cat: 'Shopping & Lifestyle', name: 'Online Shopping' },
+                    { cat: 'Shopping & Lifestyle', name: 'General Shopping' },
+                    { cat: 'Shopping & Lifestyle', name: 'Function Expenses' },
+                    { cat: 'Shopping & Lifestyle', name: 'Outing / Entertainment' },
+                    // 8. Health & Medical
+                    { cat: 'Health & Medical', name: 'Medicines' },
+                    { cat: 'Health & Medical', name: 'Doctor Consultation' },
+                    { cat: 'Health & Medical', name: 'Hospital Charges' },
+                    { cat: 'Health & Medical', name: 'Emergency Medical' },
+                    // 9. Emergency
+                    { cat: 'Emergency', name: 'Medical Emergency' },
+                    { cat: 'Emergency', name: 'Repair Emergency' },
+                    { cat: 'Emergency', name: 'Family Emergency' },
+                    { cat: 'Emergency', name: 'Other Emergency' },
+                    // 10. Others
+                    { cat: 'Others', name: 'Miscellaneous' },
+                    { cat: 'Others', name: 'Unknown Expense' },
+                    { cat: 'Others', name: 'Future Category' }
+                ];
+
+                for (const item of defaultExpenseItems) {
+                    await db.query(
+                        'INSERT INTO home_expense_items (id, category, name, type) VALUES ($1, $2, $3, $4)',
+                        [Date.now() + Math.floor(Math.random() * 100000), item.cat, item.name, 'expense']
+                    );
+                }
+
+                console.log('✅ Default home expense items seeded.');
+            }
+
+            // Check and seed Income items separately if they don't exist
+            const incomeItemsCheck = await db.query("SELECT COUNT(*) FROM home_expense_items WHERE type = 'income'");
+            if (parseInt(incomeItemsCheck.rows[0].count) === 0) {
+                console.log('Seeding default home income items...');
+                const defaultIncomeItems = [
+                    { cat: 'Salary', name: 'Monthly Salary' },
+                    { cat: 'Business', name: 'Business Profit' },
+                    { cat: 'Rent', name: 'House Rent' },
+                    { cat: 'Interest', name: 'Bank Interest' },
+                    { cat: 'Gift', name: 'Cash Gift' }
+                ];
+
+                for (const item of defaultIncomeItems) {
+                    await db.query(
+                        'INSERT INTO home_expense_items (id, category, name, type) VALUES ($1, $2, $3, $4)',
+                        [Date.now() + Math.floor(Math.random() * 100000), item.cat, item.name, 'income']
+                    );
+                }
+                console.log('✅ Default home income items seeded.');
+            }
+        } catch (err) {
+            console.error('Error seeding home expense items:', err.message);
+        }
+
         console.log('Database tables initialized successfully!');
     } catch (err) {
         console.error('Error initializing database tables:', err);
@@ -1824,6 +2023,157 @@ app.delete('/api/farm/expenses/:id', async (req, res) => {
     }
 });
 
+// ========== PREVIOUS MONTH STOCK ENDPOINTS ==========
+
+// --- Previous Month Item Stock ---
+app.get('/api/previous-month-stock/items', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM previous_month_item_stock ORDER BY year DESC, month DESC, item_name');
+        res.json(result.rows.map(row => ({
+            id: row.id,
+            month: row.month,
+            year: row.year,
+            itemName: row.item_name,
+            quantity: row.quantity,
+            unit: row.unit
+        })));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/previous-month-stock/items', async (req, res) => {
+    const { id, month, year, itemName, quantity, unit } = req.body;
+    try {
+        const result = await db.query(
+            `INSERT INTO previous_month_item_stock (id, month, year, item_name, quantity, unit) 
+             VALUES ($1, $2, $3, $4, $5, $6) 
+             ON CONFLICT (month, year, item_name) 
+             DO UPDATE SET quantity = $5, unit = $6
+             RETURNING *`,
+            [id, month, year, itemName, quantity, unit || 'kg']
+        );
+        res.json({
+            id: result.rows[0].id,
+            month: result.rows[0].month,
+            year: result.rows[0].year,
+            itemName: result.rows[0].item_name,
+            quantity: result.rows[0].quantity,
+            unit: result.rows[0].unit
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/previous-month-stock/items/:id', async (req, res) => {
+    const { id } = req.params;
+    const { month, year, itemName, quantity, unit } = req.body;
+    try {
+        const result = await db.query(
+            `UPDATE previous_month_item_stock 
+             SET month = $1, year = $2, item_name = $3, quantity = $4, unit = $5 
+             WHERE id = $6 RETURNING *`,
+            [month, year, itemName, quantity, unit, id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+        res.json({
+            id: result.rows[0].id,
+            month: result.rows[0].month,
+            year: result.rows[0].year,
+            itemName: result.rows[0].item_name,
+            quantity: result.rows[0].quantity,
+            unit: result.rows[0].unit
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/previous-month-stock/items/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM previous_month_item_stock WHERE id = $1', [id]);
+        res.json({ message: 'Item stock deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Home Loans Endpoints ---
+
+app.get('/api/home/loans', async (req, res) => {
+    try {
+        const loans = await db.query('SELECT * FROM home_loans ORDER BY start_date DESC');
+        const transactions = await db.query('SELECT * FROM home_loan_transactions ORDER BY date DESC');
+        res.json({ loans: loans.rows, transactions: transactions.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/home/loans', async (req, res) => {
+    const { id, name, loan_type, principal_amount, current_balance, interest_rate, start_date, status, emi_amount, due_date, closing_date, account_number, tenure_months, end_date } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO home_loans (id, name, loan_type, principal_amount, current_balance, interest_rate, start_date, status, emi_amount, due_date, closing_date, account_number, tenure_months, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *',
+            [id, name, loan_type, principal_amount, current_balance, interest_rate, start_date, status || 'active', emi_amount || 0, due_date, closing_date, account_number, tenure_months, end_date]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/home/loans/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, loan_type, principal_amount, current_balance, interest_rate, start_date, status, emi_amount, due_date, closing_date, account_number, tenure_months, end_date } = req.body;
+    try {
+        const result = await db.query(
+            'UPDATE home_loans SET name = $1, loan_type = $2, principal_amount = $3, current_balance = $4, interest_rate = $5, start_date = $6, status = $7, emi_amount = $8, due_date = $9, closing_date = $10, account_number = $11, tenure_months = $12, end_date = $13 WHERE id = $14 RETURNING *',
+            [name, loan_type, principal_amount, current_balance, interest_rate, start_date, status, emi_amount, due_date, closing_date, account_number, tenure_months, end_date, id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/home/loans/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM home_loans WHERE id = $1', [id]);
+        res.json({ message: 'Loan deleted' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/home/loan-transactions', async (req, res) => {
+    const { id, loan_id, date, amount, type, description, interest_component } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO home_loan_transactions (id, loan_id, date, amount, type, description, interest_component) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+            [id, loan_id, date, amount, type, description, interest_component || 0]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/home/loan-transactions/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM home_loan_transactions WHERE id = $1', [id]);
+        res.json({ message: 'Transaction deleted' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- Farm Income ---
 app.get('/api/farm/income', async (req, res) => {
     try {
@@ -2103,6 +2453,171 @@ app.delete('/api/previous-month-stock/raw-materials/:id', async (req, res) => {
 
 // Start server after initializing database
 initializeTables().then(() => {
+    // --- Home Module Endpoints ---
+
+    // Home Income
+    app.get('/api/home/income', async (req, res) => {
+        try {
+            const result = await db.query('SELECT * FROM home_income ORDER BY date DESC');
+            res.json(result.rows);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/home/income', async (req, res) => {
+        const { id, date, description, amount, category } = req.body;
+        try {
+            const result = await db.query(
+                'INSERT INTO home_income (id, date, description, amount, category) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+                [id, date, description, amount, category]
+            );
+            res.json(result.rows[0]);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.put('/api/home/income/:id', async (req, res) => {
+        const { id } = req.params;
+        const { date, description, amount, category } = req.body;
+        try {
+            let query = 'UPDATE home_income SET ';
+            const params = [];
+            let paramCount = 1;
+
+            if (date !== undefined) { query += `date = $${paramCount}, `; params.push(date); paramCount++; }
+            if (description !== undefined) { query += `description = $${paramCount}, `; params.push(description); paramCount++; }
+            if (amount !== undefined) { query += `amount = $${paramCount}, `; params.push(amount); paramCount++; }
+            if (category !== undefined) { query += `category = $${paramCount}, `; params.push(category); paramCount++; }
+
+            query = query.slice(0, -2);
+            query += ` WHERE id = $${paramCount} RETURNING *`;
+            params.push(id);
+
+            const result = await db.query(query, params);
+            res.json(result.rows[0]);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/home/income/:id', async (req, res) => {
+        const { id } = req.params;
+        try {
+            const result = await db.query('DELETE FROM home_income WHERE id = $1 RETURNING *', [id]);
+            if (result.rows.length === 0) return res.status(404).json({ error: 'Record not found' });
+            res.json({ message: 'Deleted successfully', record: result.rows[0] });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Home Expenses
+    app.get('/api/home/expenses', async (req, res) => {
+        try {
+            const result = await db.query('SELECT * FROM home_expenses ORDER BY date DESC');
+            res.json(result.rows);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/home/expenses', async (req, res) => {
+        const { id, date, description, amount, category } = req.body;
+        try {
+            const result = await db.query(
+                'INSERT INTO home_expenses (id, date, description, amount, category) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+                [id, date, description, amount, category]
+            );
+            res.json(result.rows[0]);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.put('/api/home/expenses/:id', async (req, res) => {
+        const { id } = req.params;
+        const { date, description, amount, category } = req.body;
+        try {
+            let query = 'UPDATE home_expenses SET ';
+            const params = [];
+            let paramCount = 1;
+
+            if (date !== undefined) { query += `date = $${paramCount}, `; params.push(date); paramCount++; }
+            if (description !== undefined) { query += `description = $${paramCount}, `; params.push(description); paramCount++; }
+            if (amount !== undefined) { query += `amount = $${paramCount}, `; params.push(amount); paramCount++; }
+            if (category !== undefined) { query += `category = $${paramCount}, `; params.push(category); paramCount++; }
+
+            query = query.slice(0, -2);
+            query += ` WHERE id = $${paramCount} RETURNING *`;
+            params.push(id);
+
+            const result = await db.query(query, params);
+            res.json(result.rows[0]);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/home/expenses/:id', async (req, res) => {
+        const { id } = req.params;
+        try {
+            const result = await db.query('DELETE FROM home_expenses WHERE id = $1 RETURNING *', [id]);
+            if (result.rows.length === 0) return res.status(404).json({ error: 'Record not found' });
+            res.json({ message: 'Deleted successfully', record: result.rows[0] });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Home Expense Items (Master List)
+    app.get('/api/home/expense-items', async (req, res) => {
+        try {
+            const result = await db.query('SELECT * FROM home_expense_items ORDER BY category, name');
+            res.json(result.rows);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/home/expense-items', async (req, res) => {
+        const { id, category, name, type } = req.body;
+        try {
+            const result = await db.query(
+                'INSERT INTO home_expense_items (id, category, name, type) VALUES ($1, $2, $3, $4) RETURNING *',
+                [id, category, name, type || 'expense']
+            );
+            res.json(result.rows[0]);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.put('/api/home/expense-items/:id', async (req, res) => {
+        const { id } = req.params;
+        const { category, name, type } = req.body;
+        try {
+            const result = await db.query(
+                'UPDATE home_expense_items SET category = $1, name = $2, type = $3 WHERE id = $4 RETURNING *',
+                [category, name, type || 'expense', id]
+            );
+            res.json(result.rows[0]);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/home/expense-items/:id', async (req, res) => {
+        const { id } = req.params;
+        try {
+            const result = await db.query('DELETE FROM home_expense_items WHERE id = $1 RETURNING *', [id]);
+            if (result.rows.length === 0) return res.status(404).json({ error: 'Record not found' });
+            res.json({ message: 'Deleted successfully', record: result.rows[0] });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
@@ -2110,4 +2625,3 @@ initializeTables().then(() => {
     // Keep process alive
     setInterval(() => { }, 10000);
 });
-

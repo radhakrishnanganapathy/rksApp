@@ -35,6 +35,13 @@ export const DataProvider = ({ children }) => {
     const [previousMonthItemStock, setPreviousMonthItemStock] = useState([]);
     const [previousMonthRawMaterialStock, setPreviousMonthRawMaterialStock] = useState([]);
 
+    // Home Module State (Personal Finance)
+    const [homeIncome, setHomeIncome] = useState([]);
+    const [homeExpenses, setHomeExpenses] = useState([]);
+    const [homeExpenseItems, setHomeExpenseItems] = useState([]);
+    const [homeLoans, setHomeLoans] = useState([]);
+    const [homeLoanTransactions, setHomeLoanTransactions] = useState([]);
+
     // --- Data Mappers (Backend snake_case -> Frontend camelCase) ---
     const mapSale = (s) => ({
         ...s,
@@ -111,6 +118,9 @@ export const DataProvider = ({ children }) => {
                 'previous-month-stock/items', 'previous-month-stock/raw-materials'
             ];
 
+            // Home endpoints
+            const homeEndpoints = ['home/income', 'home/expenses', 'home/expense-items', 'home/loans'];
+
             // Fetch core data
             const coreResponses = await Promise.all(
                 coreEndpoints.map(endpoint => fetch(`${API_URL}/${endpoint}`))
@@ -170,6 +180,30 @@ export const DataProvider = ({ children }) => {
                 setFarmTimeline([]);
                 setPreviousMonthItemStock([]);
                 setPreviousMonthRawMaterialStock([]);
+            }
+
+            // Fetch Home Data
+            try {
+                const homeResponses = await Promise.all(
+                    homeEndpoints.map(endpoint =>
+                        fetch(`${API_URL}/${endpoint}`).catch(() => ({ ok: false }))
+                    )
+                );
+                const homeData = await Promise.all(
+                    homeResponses.map(res =>
+                        res.ok ? res.json().catch(() => []) : []
+                    )
+                );
+                setHomeIncome(homeData[0] || []);
+                setHomeExpenses(homeData[1] || []);
+                setHomeExpenseItems(homeData[2] || []);
+                setHomeLoans(homeData[3]?.loans || []);
+                setHomeLoanTransactions(homeData[3]?.transactions || []);
+            } catch (homeError) {
+                console.log('Home endpoints error:', homeError);
+                setHomeIncome([]);
+                setHomeExpenses([]);
+                setHomeExpenseItems([]);
             }
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -1107,6 +1141,57 @@ export const DataProvider = ({ children }) => {
     };
 
 
+    // --- Home Module Functions ---
+    const addHomeIncome = (data) => addItem('home/income', { ...data, id: Date.now() }, setHomeIncome, homeIncome);
+    const updateHomeIncome = (id, data) => updateItem('home/income', id, data, setHomeIncome, homeIncome);
+    const deleteHomeIncome = (id) => deleteItem('home/income', id, setHomeIncome, homeIncome);
+
+    const addHomeExpense = (data) => addItem('home/expenses', { ...data, id: Date.now() }, setHomeExpenses, homeExpenses);
+    const updateHomeExpense = (id, data) => updateItem('home/expenses', id, data, setHomeExpenses, homeExpenses);
+    const deleteHomeExpense = (id) => deleteItem('home/expenses', id, setHomeExpenses, homeExpenses);
+
+    const addHomeExpenseItem = (data) => addItem('home/expense-items', { ...data, id: Date.now() }, setHomeExpenseItems, homeExpenseItems);
+    const updateHomeExpenseItem = (id, data) => updateItem('home/expense-items', id, data, setHomeExpenseItems, homeExpenseItems);
+    const deleteHomeExpenseItem = (id) => deleteItem('home/expense-items', id, setHomeExpenseItems, homeExpenseItems);
+
+    // Home Loans Functions
+    const addHomeLoan = (data) => addItem('home/loans', { ...data, id: Date.now() }, setHomeLoans, homeLoans);
+    const updateHomeLoan = (id, data) => updateItem('home/loans', id, data, setHomeLoans, homeLoans);
+    const deleteHomeLoan = (id) => deleteItem('home/loans', id, setHomeLoans, homeLoans);
+
+    const addHomeLoanTransaction = async (data) => {
+        try {
+            const res = await fetch(`${API_URL}/home/loan-transactions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...data, id: Date.now() })
+            });
+            const savedTx = await res.json();
+            setHomeLoanTransactions([savedTx, ...homeLoanTransactions]);
+
+            // Refetch loans to update current balance
+            const loansRes = await fetch(`${API_URL}/home/loans`);
+            const loansData = await loansRes.json();
+            setHomeLoans(loansData.loans);
+        } catch (err) {
+            console.error("Error adding loan transaction:", err);
+        }
+    };
+
+    const deleteHomeLoanTransaction = async (id) => {
+        try {
+            await fetch(`${API_URL}/home/loan-transactions/${id}`, { method: 'DELETE' });
+            setHomeLoanTransactions(homeLoanTransactions.filter(t => t.id !== id));
+
+            // Refetch loans to update current balance
+            const loansRes = await fetch(`${API_URL}/home/loans`);
+            const loansData = await loansRes.json();
+            setHomeLoans(loansData.loans);
+        } catch (err) {
+            console.error("Error deleting loan transaction:", err);
+        }
+    };
+
     return (
         <DataContext.Provider value={{
             sales, addSale, markSaleAsPaid, updateSaleAmountReceived, deleteSale, updateSale,
@@ -1132,6 +1217,12 @@ export const DataProvider = ({ children }) => {
             // Previous Month Stock
             previousMonthItemStock,
             previousMonthRawMaterialStock,
+            // Home Module
+            homeIncome, addHomeIncome, updateHomeIncome, deleteHomeIncome,
+            homeExpenses, addHomeExpense, updateHomeExpense, deleteHomeExpense,
+            homeExpenseItems, addHomeExpenseItem, updateHomeExpenseItem, deleteHomeExpenseItem,
+            homeLoans, addHomeLoan, updateHomeLoan, deleteHomeLoan,
+            homeLoanTransactions, addHomeLoanTransaction, deleteHomeLoanTransaction,
             items,
             loading, refreshData
         }}>
