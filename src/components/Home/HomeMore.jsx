@@ -8,6 +8,7 @@ const HomeMore = ({ onNavigate }) => {
         { id: 'expenses', label: 'Expenses', icon: TrendingDown, color: 'text-red-600', bg: 'bg-red-100' },
         { id: 'expense-master', label: 'Expense List', icon: LayoutDashboard, color: 'text-blue-600', bg: 'bg-blue-100' },
         { id: 'loans', label: 'Loans & EMI', icon: Wallet, color: 'text-orange-600', bg: 'bg-orange-100' },
+        { id: 'savings', label: 'Savings', icon: TrendingUp, color: 'text-teal-600', bg: 'bg-teal-100' },
     ];
 
     return (

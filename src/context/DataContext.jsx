@@ -41,6 +41,8 @@ export const DataProvider = ({ children }) => {
     const [homeExpenseItems, setHomeExpenseItems] = useState([]);
     const [homeLoans, setHomeLoans] = useState([]);
     const [homeLoanTransactions, setHomeLoanTransactions] = useState([]);
+    const [homeSavings, setHomeSavings] = useState([]);
+    const [homeSavingsTransactions, setHomeSavingsTransactions] = useState([]);
 
     // --- Data Mappers (Backend snake_case -> Frontend camelCase) ---
     const mapSale = (s) => ({
@@ -119,7 +121,7 @@ export const DataProvider = ({ children }) => {
             ];
 
             // Home endpoints
-            const homeEndpoints = ['home/income', 'home/expenses', 'home/expense-items', 'home/loans'];
+            const homeEndpoints = ['home/income', 'home/expenses', 'home/expense-items', 'home/loans', 'home/savings', 'home/savings-transactions'];
 
             // Fetch core data
             const coreResponses = await Promise.all(
@@ -199,6 +201,8 @@ export const DataProvider = ({ children }) => {
                 setHomeExpenseItems(homeData[2] || []);
                 setHomeLoans(homeData[3]?.loans || []);
                 setHomeLoanTransactions(homeData[3]?.transactions || []);
+                setHomeSavings(homeData[4] || []);
+                setHomeSavingsTransactions(homeData[5] || []);
             } catch (homeError) {
                 console.log('Home endpoints error:', homeError);
                 setHomeIncome([]);
@@ -1159,6 +1163,42 @@ export const DataProvider = ({ children }) => {
     const updateHomeLoan = (id, data) => updateItem('home/loans', id, data, setHomeLoans, homeLoans);
     const deleteHomeLoan = (id) => deleteItem('home/loans', id, setHomeLoans, homeLoans);
 
+    // Home Savings Functions
+    const addHomeSaving = (data) => addItem('home/savings', { ...data, id: Date.now() }, setHomeSavings, homeSavings);
+    const updateHomeSaving = (id, data) => updateItem('home/savings', id, data, setHomeSavings, homeSavings);
+    const deleteHomeSaving = (id) => deleteItem('home/savings', id, setHomeSavings, homeSavings);
+
+    const addHomeSavingTransaction = async (data) => {
+        try {
+            const res = await fetch(`${API_URL}/home/savings-transactions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...data, id: Date.now() })
+            });
+            const savedTx = await res.json();
+            setHomeSavingsTransactions([savedTx, ...homeSavingsTransactions]);
+
+            // Refetch savings to update balance
+            const savingsRes = await fetch(`${API_URL}/home/savings`);
+            setHomeSavings(await savingsRes.json());
+        } catch (err) {
+            console.error("Error adding saving transaction:", err);
+        }
+    };
+
+    const deleteHomeSavingTransaction = async (id) => {
+        try {
+            await fetch(`${API_URL}/home/savings-transactions/${id}`, { method: 'DELETE' });
+            setHomeSavingsTransactions(homeSavingsTransactions.filter(t => t.id !== id));
+
+            // Refetch savings to update balance
+            const savingsRes = await fetch(`${API_URL}/home/savings`);
+            setHomeSavings(await savingsRes.json());
+        } catch (err) {
+            console.error("Error deleting saving transaction:", err);
+        }
+    };
+
     const addHomeLoanTransaction = async (data) => {
         try {
             const res = await fetch(`${API_URL}/home/loan-transactions`, {
@@ -1223,6 +1263,8 @@ export const DataProvider = ({ children }) => {
             homeExpenseItems, addHomeExpenseItem, updateHomeExpenseItem, deleteHomeExpenseItem,
             homeLoans, addHomeLoan, updateHomeLoan, deleteHomeLoan,
             homeLoanTransactions, addHomeLoanTransaction, deleteHomeLoanTransaction,
+            homeSavings, addHomeSaving, updateHomeSaving, deleteHomeSaving,
+            homeSavingsTransactions, addHomeSavingTransaction, deleteHomeSavingTransaction,
             items,
             loading, refreshData
         }}>

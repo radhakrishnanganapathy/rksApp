@@ -40,6 +40,7 @@ import HomeExpenses from './components/Home/HomeExpenses';
 import HomeMore from './components/Home/HomeMore';
 import HomeExpenseMaster from './components/Home/HomeExpenseMaster';
 import HomeLoans from './components/Home/HomeLoans';
+import HomeSavings from './components/Home/HomeSavings';
 
 import { useData } from './context/DataContext';
 
@@ -94,6 +95,8 @@ function App() {
           return <HomeExpenseMaster onNavigateBack={() => setActiveTab('more')} />;
         case 'loans':
           return <HomeLoans onNavigateBack={() => setActiveTab('more')} />;
+        case 'savings':
+          return <HomeSavings onNavigateBack={() => setActiveTab('more')} />;
         case 'more':
           return <HomeMore onNavigate={setActiveTab} />;
         default:

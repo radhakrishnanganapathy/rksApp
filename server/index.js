@@ -613,9 +613,38 @@ const initializeTables = async () => {
             console.error('Error seeding home expense items:', err.message);
         }
 
-        console.log('Database tables initialized successfully!');
+        // Home Savings Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS home_savings (
+                id BIGINT PRIMARY KEY,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL, -- 'gold', 'fd', 'rd', 'own', 'stock', 'sip', 'mutual_fund', 'insurance', 'pf', 'outstanding'
+                amount NUMERIC NOT NULL,
+                start_date DATE,
+                end_date DATE,
+                duration TEXT,
+                interest_rate NUMERIC,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Home Savings Transactions Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS home_savings_transactions (
+                id BIGINT PRIMARY KEY,
+                saving_id BIGINT REFERENCES home_savings(id) ON DELETE CASCADE,
+                date DATE NOT NULL,
+                amount NUMERIC NOT NULL,
+                type TEXT NOT NULL, -- 'deposit', 'withdrawal', 'interest'
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        console.log('✅ Database tables checked/initialized');
     } catch (err) {
-        console.error('Error initializing database tables:', err);
+        console.error('❌ Database initialization failed:', err);
         process.exit(1);
     }
 };
@@ -2171,6 +2200,139 @@ app.delete('/api/home/loan-transactions/:id', async (req, res) => {
         res.json({ message: 'Transaction deleted' });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Home Savings APIs ---
+
+// Get Home Savings
+app.get('/api/home/savings', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM home_savings ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Add Home Saving
+app.post('/api/home/savings', async (req, res) => {
+    const { id, name, type, amount, start_date, end_date, duration, interest_rate, description } = req.body;
+    try {
+        const newId = id || Date.now();
+        const result = await db.query(
+            'INSERT INTO home_savings (id, name, type, amount, start_date, end_date, duration, interest_rate, description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+            [newId, name, type, amount, start_date, end_date, duration, interest_rate, description]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Update Home Saving
+app.put('/api/home/savings/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, type, amount, start_date, end_date, duration, interest_rate, description } = req.body;
+    try {
+        const result = await db.query(
+            'UPDATE home_savings SET name = $1, type = $2, amount = $3, start_date = $4, end_date = $5, duration = $6, interest_rate = $7, description = $8 WHERE id = $9 RETURNING *',
+            [name, type, amount, start_date, end_date, duration, interest_rate, description, id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Delete Home Saving
+app.delete('/api/home/savings/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM home_savings WHERE id = $1', [id]);
+        res.json({ message: 'Saving deleted' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// ... (Existing Home Savings APIs)
+
+// --- Home Savings Transactions ---
+
+// Get Transactions for a Saving Scheme
+app.get('/api/home/savings-transactions', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM home_savings_transactions ORDER BY date DESC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Add Transaction (Deposit/Withdrawal)
+app.post('/api/home/savings-transactions', async (req, res) => {
+    const { id, saving_id, date, amount, type, description } = req.body;
+    try {
+        const newId = id || Date.now();
+
+        // 1. Record Transaction
+        const result = await db.query(
+            'INSERT INTO home_savings_transactions (id, saving_id, date, amount, type, description) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [newId, saving_id, date, amount, type, description]
+        );
+
+        // 2. Update Saving Balance
+        // If deposit/interest, add to amount. If withdrawal, subtract.
+        let balanceChange = Number(amount);
+        if (type === 'withdrawal') {
+            balanceChange = -balanceChange;
+        }
+
+        await db.query(
+            'UPDATE home_savings SET amount = amount + $1 WHERE id = $2',
+            [balanceChange, saving_id]
+        );
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Delete Transaction
+app.delete('/api/home/savings-transactions/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        // 1. Get transaction details to revert balance
+        const txRes = await db.query('SELECT * FROM home_savings_transactions WHERE id = $1', [id]);
+        if (txRes.rows.length === 0) return res.status(404).json({ error: 'Transaction not found' });
+        const tx = txRes.rows[0];
+
+        // 2. Revert Balance
+        let balanceChange = -Number(tx.amount); // Reverse the effect
+        if (tx.type === 'withdrawal') {
+            balanceChange = Number(tx.amount); // Add back if it was a withdrawal
+        }
+
+        await db.query(
+            'UPDATE home_savings SET amount = amount + $1 WHERE id = $2',
+            [balanceChange, tx.saving_id]
+        );
+
+        // 3. Delete Transaction
+        await db.query('DELETE FROM home_savings_transactions WHERE id = $1', [id]);
+
+        res.json({ message: 'Transaction deleted' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
