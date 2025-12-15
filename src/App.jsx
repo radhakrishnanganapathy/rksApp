@@ -21,6 +21,7 @@ import BalanceAmount from './components/BalanceAmount';
 import GestureHandler from './components/GestureHandler';
 import BackupManager from './components/BackupManager';
 import Products from './components/Products';
+import PreviousMonthStock from './components/PreviousMonthStock';
 
 // Farm Components
 import FarmDashboard from './components/FarmDashboard';
@@ -109,6 +110,8 @@ function App() {
         return <DataManagement onNavigateBack={() => setActiveTab('more')} />;
       case 'products':
         return <Products onNavigateBack={() => setActiveTab('more')} />;
+      case 'previous-month-stock':
+        return <PreviousMonthStock onNavigateBack={() => setActiveTab('more')} />;
       default:
         return <Dashboard />;
     }
@@ -124,7 +127,7 @@ function App() {
       const farmTabs = ['expenses', 'income', 'cultivation', 'harvesting', 'crop-master', 'timeline', 'farm-categories'];
       const homeSnacksTabs = ['production', 'expenses', 'employees', 'customers', 'stats',
         'analysis', 'lastbuy', 'compare', 'orders', 'balance',
-        'raw-material-prices', 'data-management', 'products'];
+        'raw-material-prices', 'data-management', 'products', 'previous-month-stock'];
 
       if (businessMode === 'farm' && farmTabs.includes(activeTab)) {
         setActiveTab('more');

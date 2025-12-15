@@ -31,6 +31,10 @@ export const DataProvider = ({ children }) => {
     const [farmTimeline, setFarmTimeline] = useState([]);
     const [cropTypes, setCropTypes] = useState([]); // Crop Master List
 
+    // Previous Month Stock State
+    const [previousMonthItemStock, setPreviousMonthItemStock] = useState([]);
+    const [previousMonthRawMaterialStock, setPreviousMonthRawMaterialStock] = useState([]);
+
     // --- Data Mappers (Backend snake_case -> Frontend camelCase) ---
     const mapSale = (s) => ({
         ...s,
@@ -103,7 +107,8 @@ export const DataProvider = ({ children }) => {
 
             // Farm endpoints (optional - may not exist on backend yet)
             const farmEndpoints = [
-                'farm/crops', 'farm/expenses', 'farm/income', 'farm/expense-categories', 'farm/timeline'
+                'farm/crops', 'farm/expenses', 'farm/income', 'farm/expense-categories', 'farm/timeline',
+                'previous-month-stock/items', 'previous-month-stock/raw-materials'
             ];
 
             // Fetch core data
@@ -153,6 +158,8 @@ export const DataProvider = ({ children }) => {
                 setFarmIncome(farmData[2] || []);
                 setFarmExpenseCategories(farmData[3] || []);
                 setFarmTimeline(farmData[4] || []);
+                setPreviousMonthItemStock(farmData[5] || []);
+                setPreviousMonthRawMaterialStock(farmData[6] || []);
             } catch (farmError) {
                 console.log('Farm endpoints not available yet:', farmError.message);
                 // Set empty farm data
@@ -161,6 +168,8 @@ export const DataProvider = ({ children }) => {
                 setFarmIncome([]);
                 setFarmExpenseCategories([]);
                 setFarmTimeline([]);
+                setPreviousMonthItemStock([]);
+                setPreviousMonthRawMaterialStock([]);
             }
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -453,8 +462,12 @@ export const DataProvider = ({ children }) => {
                 throw new Error('Failed to fetch attendance');
             }
             const attendanceData = await attendanceRes.json();
-            setAttendance(attendanceData.map(mapAttendance));
-            console.log('Attendance marked successfully');
+            const mappedData = attendanceData.map(mapAttendance);
+            console.log('Fetched attendance data:', mappedData.length, 'records');
+            console.log('Sample record:', mappedData[0]);
+            // Force new array reference to trigger React re-render
+            setAttendance([...mappedData]);
+            console.log('Attendance state updated');
         } catch (err) {
             console.error("Error marking attendance:", err);
             alert(`Error marking attendance: ${err.message}`);
@@ -1116,6 +1129,9 @@ export const DataProvider = ({ children }) => {
             addFarmExpenseSubcategory, updateFarmExpenseSubcategory, deleteFarmExpenseSubcategory,
             farmTimeline, addFarmTimeline, updateFarmTimeline, deleteFarmTimeline,
             cropTypes, addCropType, updateCropType, deleteCropType,
+            // Previous Month Stock
+            previousMonthItemStock,
+            previousMonthRawMaterialStock,
             items,
             loading, refreshData
         }}>

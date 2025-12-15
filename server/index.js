@@ -384,6 +384,36 @@ const initializeTables = async () => {
             console.error('Error inserting default farm categories:', err.message);
         }
 
+        // ========== PREVIOUS MONTH STOCK TABLES ==========
+
+        // Previous Month Item Stock Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS previous_month_item_stock (
+                id BIGINT PRIMARY KEY,
+                month INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                item_name TEXT NOT NULL,
+                quantity NUMERIC NOT NULL,
+                unit TEXT DEFAULT 'kg',
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(month, year, item_name)
+            );
+        `);
+
+        // Previous Month Raw Material Stock Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS previous_month_raw_material_stock (
+                id BIGINT PRIMARY KEY,
+                month INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                material_name TEXT NOT NULL,
+                quantity NUMERIC NOT NULL,
+                unit TEXT DEFAULT 'kg',
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(month, year, material_name)
+            );
+        `);
+
         console.log('Database tables initialized successfully!');
     } catch (err) {
         console.error('Error initializing database tables:', err);
@@ -1910,6 +1940,162 @@ app.delete('/api/farm/timeline/:id', async (req, res) => {
     try {
         await db.query('DELETE FROM farm_timeline WHERE id = $1', [id]);
         res.json({ message: 'Timeline task deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ========== PREVIOUS MONTH STOCK ENDPOINTS ==========
+
+// --- Previous Month Item Stock ---
+app.get('/api/previous-month-stock/items', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM previous_month_item_stock ORDER BY year DESC, month DESC, item_name');
+        res.json(result.rows.map(row => ({
+            id: row.id,
+            month: row.month,
+            year: row.year,
+            itemName: row.item_name,
+            quantity: row.quantity,
+            unit: row.unit
+        })));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/previous-month-stock/items', async (req, res) => {
+    const { id, month, year, itemName, quantity, unit } = req.body;
+    try {
+        const result = await db.query(
+            `INSERT INTO previous_month_item_stock (id, month, year, item_name, quantity, unit) 
+             VALUES ($1, $2, $3, $4, $5, $6) 
+             ON CONFLICT (month, year, item_name) 
+             DO UPDATE SET quantity = $5, unit = $6
+             RETURNING *`,
+            [id, month, year, itemName, quantity, unit || 'kg']
+        );
+        res.json({
+            id: result.rows[0].id,
+            month: result.rows[0].month,
+            year: result.rows[0].year,
+            itemName: result.rows[0].item_name,
+            quantity: result.rows[0].quantity,
+            unit: result.rows[0].unit
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/previous-month-stock/items/:id', async (req, res) => {
+    const { id } = req.params;
+    const { month, year, itemName, quantity, unit } = req.body;
+    try {
+        const result = await db.query(
+            `UPDATE previous_month_item_stock 
+             SET month = $1, year = $2, item_name = $3, quantity = $4, unit = $5 
+             WHERE id = $6 RETURNING *`,
+            [month, year, itemName, quantity, unit, id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+        res.json({
+            id: result.rows[0].id,
+            month: result.rows[0].month,
+            year: result.rows[0].year,
+            itemName: result.rows[0].item_name,
+            quantity: result.rows[0].quantity,
+            unit: result.rows[0].unit
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/previous-month-stock/items/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM previous_month_item_stock WHERE id = $1', [id]);
+        res.json({ message: 'Item stock deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Previous Month Raw Material Stock ---
+app.get('/api/previous-month-stock/raw-materials', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM previous_month_raw_material_stock ORDER BY year DESC, month DESC, material_name');
+        res.json(result.rows.map(row => ({
+            id: row.id,
+            month: row.month,
+            year: row.year,
+            materialName: row.material_name,
+            quantity: row.quantity,
+            unit: row.unit
+        })));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/previous-month-stock/raw-materials', async (req, res) => {
+    const { id, month, year, materialName, quantity, unit } = req.body;
+    try {
+        const result = await db.query(
+            `INSERT INTO previous_month_raw_material_stock (id, month, year, material_name, quantity, unit) 
+             VALUES ($1, $2, $3, $4, $5, $6) 
+             ON CONFLICT (month, year, material_name) 
+             DO UPDATE SET quantity = $5, unit = $6
+             RETURNING *`,
+            [id, month, year, materialName, quantity, unit || 'kg']
+        );
+        res.json({
+            id: result.rows[0].id,
+            month: result.rows[0].month,
+            year: result.rows[0].year,
+            materialName: result.rows[0].material_name,
+            quantity: result.rows[0].quantity,
+            unit: result.rows[0].unit
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/previous-month-stock/raw-materials/:id', async (req, res) => {
+    const { id } = req.params;
+    const { month, year, materialName, quantity, unit } = req.body;
+    try {
+        const result = await db.query(
+            `UPDATE previous_month_raw_material_stock 
+             SET month = $1, year = $2, material_name = $3, quantity = $4, unit = $5 
+             WHERE id = $6 RETURNING *`,
+            [month, year, materialName, quantity, unit, id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+        res.json({
+            id: result.rows[0].id,
+            month: result.rows[0].month,
+            year: result.rows[0].year,
+            materialName: result.rows[0].material_name,
+            quantity: result.rows[0].quantity,
+            unit: result.rows[0].unit
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/previous-month-stock/raw-materials/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM previous_month_raw_material_stock WHERE id = $1', [id]);
+        res.json({ message: 'Raw material stock deleted successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
