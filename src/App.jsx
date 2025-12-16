@@ -171,7 +171,12 @@ function App() {
       }
     }}>
 
-      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <Layout
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        businessMode={businessMode}
+        setBusinessMode={handleBusinessModeChange}
+      >
         {renderContent()}
       </Layout>
     </GestureHandler>

@@ -476,6 +476,8 @@ const initializeTables = async () => {
             await db.query(`ALTER TABLE home_loans ADD COLUMN IF NOT EXISTS due_date INTEGER`);
             await db.query(`ALTER TABLE home_loans ADD COLUMN IF NOT EXISTS closing_date DATE`);
             await db.query(`ALTER TABLE home_loans ADD COLUMN IF NOT EXISTS account_number TEXT`);
+            await db.query(`ALTER TABLE home_loans ADD COLUMN IF NOT EXISTS tenure_months INTEGER`);
+            await db.query(`ALTER TABLE home_loans ADD COLUMN IF NOT EXISTS end_date DATE`);
         } catch (err) {
             console.log('Error adding columns to home_loans:', err.message);
         }
