@@ -19,7 +19,7 @@ import RawMaterialPrices from './components/RawMaterialPrices';
 import DataManagement from './components/DataManagement';
 import BalanceAmount from './components/BalanceAmount';
 import GestureHandler from './components/GestureHandler';
-import BackupManager from './components/BackupManager';
+
 import Products from './components/Products';
 import PreviousMonthStock from './components/PreviousMonthStock';
 
@@ -170,13 +170,8 @@ function App() {
         setActiveTab('dashboard');
       }
     }}>
-      <BackupManager />
-      <Layout
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        businessMode={businessMode}
-        setBusinessMode={handleBusinessModeChange}
-      >
+
+      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
         {renderContent()}
       </Layout>
     </GestureHandler>
