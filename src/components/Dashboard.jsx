@@ -461,7 +461,7 @@ const Dashboard = () => {
                         <Factory className="text-blue-600" size={20} />
                         <p className="text-sm font-medium text-gray-600">Raw Production</p>
                     </div>
-                    <p className="text-2xl font-bold text-gray-800">{totalProductionQty} kg</p>
+                    <p className="text-2xl font-bold text-gray-800">{totalProductionQty.toFixed(2)} kg</p>
                 </div>
 
                 <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
@@ -478,7 +478,7 @@ const Dashboard = () => {
                         <Scale className="text-indigo-600" size={20} />
                         <p className="text-sm font-medium text-gray-600">Sales (Kg)</p>
                     </div>
-                    <p className="text-2xl font-bold text-gray-800">{totalSalesKg} kg</p>
+                    <p className="text-2xl font-bold text-gray-800">{totalSalesKg.toFixed(2)} kg</p>
                 </div>
 
                 <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
@@ -503,7 +503,7 @@ const Dashboard = () => {
                         <Package className="text-teal-600" size={20} />
                         <p className="text-sm font-medium text-gray-600">Total Stocks</p>
                     </div>
-                    <p className="text-2xl font-bold text-gray-800">{totalStocksKg.toFixed(1)} kg</p>
+                    <p className="text-2xl font-bold text-gray-800">{totalStocksKg.toFixed(2)} kg</p>
                 </div>
 
                 {/* Row 5: Overall Expenses & Usage Based Expenses */}
@@ -615,7 +615,7 @@ const Dashboard = () => {
                     {stocks.products.filter(p => p.qty < 10).map(p => (
                         <div key={p.name} className="flex justify-between items-center text-sm p-2 bg-red-50 rounded text-red-700">
                             <span>{p.name}</span>
-                            <span className="font-bold">{p.qty} left</span>
+                            <span className="font-bold">{Number(p.qty).toFixed(2)} left</span>
                         </div>
                     ))}
                     {stocks.products.filter(p => p.qty >= 10).length === stocks.products.length && (

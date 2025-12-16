@@ -80,7 +80,7 @@ const Stock = () => {
                                 <div className="flex items-center gap-3">
                                     <div className="text-right">
                                         <span className={`font-bold ${item.qty < 20 ? 'text-red-600' : 'text-gray-800'}`}>
-                                            {item.qty}
+                                            {Number(item.qty).toFixed(2)}
                                         </span>
                                         <span className="text-xs text-gray-500 ml-1">kg</span>
                                     </div>

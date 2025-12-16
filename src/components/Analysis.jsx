@@ -190,7 +190,7 @@ const Analysis = ({ onNavigateBack }) => {
                     {summary.totalQty !== undefined && (
                         <div className="bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-100">
                             <div className="text-xs font-semibold uppercase text-blue-700 mb-1">Total Quantity</div>
-                            <p className="text-xl font-bold text-gray-800">{summary.totalQty} units</p>
+                            <p className="text-xl font-bold text-gray-800">{summary.totalQty.toFixed(2)} units</p>
                         </div>
                     )}
                     {summary.count !== undefined && (
@@ -224,7 +224,7 @@ const Analysis = ({ onNavigateBack }) => {
                                 </div>
                                 <div className="text-sm text-gray-600">
                                     {sale.items.map((item, idx) => (
-                                        <span key={idx}>{item.name} ({item.qty}){idx < sale.items.length - 1 ? ', ' : ''}</span>
+                                        <span key={idx}>{item.name} ({Number(item.qty).toFixed(2)}){idx < sale.items.length - 1 ? ', ' : ''}</span>
                                     ))}
                                 </div>
                             </div>
@@ -236,7 +236,7 @@ const Analysis = ({ onNavigateBack }) => {
                                     <p className="font-semibold text-gray-800">{prod.item}</p>
                                     <p className="text-xs text-gray-500">{prod.date}</p>
                                 </div>
-                                <p className="font-bold text-gray-800">{prod.qty} units</p>
+                                <p className="font-bold text-gray-800">{Number(prod.qty).toFixed(2)} units</p>
                             </div>
                         ))
                     )}

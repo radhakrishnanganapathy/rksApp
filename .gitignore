@@ -28,9 +28,11 @@ dist-ssr
 .env.production
 .env.local
 .env.*.local
+server/.env
 
 # APK files (large binaries)
 *.apk
+*.aab
 
 # Android SDK (very large - 734MB)
 android-sdk/
@@ -54,8 +56,106 @@ server/node_modules/
 
 # Zip files
 *.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
 
 # Other large files
 *.jar
 *.aar
 *.dex
+
+# Cache directories
+.cache/
+.parcel-cache/
+.vite/
+node_modules/.vite/
+.turbo/
+
+# Build outputs
+build/
+out/
+.next/
+.nuxt/
+.output/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# IDE specific
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.iml
+.idea/
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Large media files (optional - uncomment if needed)
+# *.mp4
+# *.mov
+# *.avi
+# *.mkv
+# *.webm
+# *.mp3
+# *.wav
+# *.flac
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+*~
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Package manager lock files (optional - uncomment if you want to ignore)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Screenshots and recordings (from testing)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+!public/**/*.png
+!public/**/*.jpg
+!public/**/*.jpeg
+!public/**/*.gif
+!src/assets/**/*.png
+!src/assets/**/*.jpg
+!src/assets/**/*.jpeg
+!src/assets/**/*.gif
+
+# Gemini/AI assistant files
+.gemini/
+
+# APK signing keys (IMPORTANT - never commit these!)
+*.keystore
+*.jks
+release-key.keystore
+debug.keystore

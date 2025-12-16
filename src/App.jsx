@@ -21,14 +21,90 @@ import BalanceAmount from './components/BalanceAmount';
 import GestureHandler from './components/GestureHandler';
 
 import Products from './components/Products';
+import PreviousMonthStock from './components/PreviousMonthStock';
+
+// Farm Components
+import FarmDashboard from './components/FarmDashboard';
+import FarmExpenses from './components/FarmExpenses';
+import FarmIncome from './components/FarmIncome';
+import FarmMore from './components/FarmMore';
+import Cultivation from './components/Cultivation';
+import Harvesting from './components/Harvesting';
+import CropMaster from './components/CropMaster';
+import FarmExpenseCategories from './components/FarmExpenseCategories';
+import Timeline from './components/Timeline';
+// Home Components
+import HomeDashboard from './components/Home/HomeDashboard';
+import HomeIncome from './components/Home/HomeIncome';
+import HomeExpenses from './components/Home/HomeExpenses';
+import HomeMore from './components/Home/HomeMore';
+import HomeExpenseMaster from './components/Home/HomeExpenseMaster';
+import HomeLoans from './components/Home/HomeLoans';
+import HomeSavings from './components/Home/HomeSavings';
 
 import { useData } from './context/DataContext';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { loading, sales, orders, production, expenses } = useData();
+  const [businessMode, setBusinessMode] = useState('homesnacks'); // 'homesnacks' or 'farm'
+  const { loading } = useData();
+
+  // Reset to dashboard when switching business modes
+  const handleBusinessModeChange = (mode) => {
+    setBusinessMode(mode);
+    setActiveTab('dashboard');
+  };
 
   const renderContent = () => {
+    // Farm Module
+    if (businessMode === 'farm') {
+      switch (activeTab) {
+        case 'dashboard':
+          return <FarmDashboard />;
+        case 'expenses':
+          return <FarmExpenses onNavigateBack={() => setActiveTab('dashboard')} />;
+        case 'income':
+          return <FarmIncome onNavigateBack={() => setActiveTab('dashboard')} />;
+        case 'more':
+          return <FarmMore onNavigate={setActiveTab} />;
+        case 'cultivation':
+          return <Cultivation onNavigateBack={() => setActiveTab('more')} />;
+        case 'harvesting':
+          return <Harvesting onNavigateBack={() => setActiveTab('more')} />;
+        case 'crop-master':
+          return <CropMaster onNavigateBack={() => setActiveTab('more')} />;
+        case 'timeline':
+          return <Timeline onNavigateBack={() => setActiveTab('more')} />;
+        case 'farm-categories':
+          return <FarmExpenseCategories onNavigateBack={() => setActiveTab('more')} />;
+        default:
+          return <FarmDashboard />;
+      }
+    }
+
+    // Home Module (Personal Finance)
+    if (businessMode === 'home') {
+      switch (activeTab) {
+        case 'dashboard':
+          return <HomeDashboard />;
+        case 'income':
+          return <HomeIncome onNavigateBack={() => setActiveTab('dashboard')} />;
+        case 'expenses':
+          return <HomeExpenses onNavigateBack={() => setActiveTab('dashboard')} />;
+        case 'expense-master':
+          return <HomeExpenseMaster onNavigateBack={() => setActiveTab('more')} />;
+        case 'loans':
+          return <HomeLoans onNavigateBack={() => setActiveTab('more')} />;
+        case 'savings':
+          return <HomeSavings onNavigateBack={() => setActiveTab('more')} />;
+        case 'more':
+          return <HomeMore onNavigate={setActiveTab} />;
+        default:
+          return <HomeDashboard />;
+      }
+    }
+
+    // HomeSnacks Module (existing)
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard />;
@@ -64,6 +140,8 @@ function App() {
         return <DataManagement onNavigateBack={() => setActiveTab('more')} />;
       case 'products':
         return <Products onNavigateBack={() => setActiveTab('more')} />;
+      case 'previous-month-stock':
+        return <PreviousMonthStock onNavigateBack={() => setActiveTab('more')} />;
       default:
         return <Dashboard />;
     }
@@ -76,8 +154,20 @@ function App() {
   return (
     <GestureHandler onBack={() => {
       // Simple history back or tab navigation logic
-      if (activeTab !== 'dashboard') {
-        setActiveTab('more'); // Default back behavior for tabs
+      const farmTabs = ['expenses', 'income', 'cultivation', 'harvesting', 'crop-master', 'timeline', 'farm-categories'];
+      const homeSnacksTabs = ['production', 'expenses', 'employees', 'customers', 'stats',
+        'analysis', 'lastbuy', 'compare', 'orders', 'balance',
+        'raw-material-prices', 'data-management', 'products', 'previous-month-stock'];
+      const homeTabs = ['income', 'expenses', 'expense-master', 'loans'];
+
+      if (businessMode === 'farm' && farmTabs.includes(activeTab)) {
+        setActiveTab('more');
+      } else if (businessMode === 'home' && homeTabs.includes(activeTab)) {
+        setActiveTab('more');
+      } else if (businessMode === 'homesnacks' && homeSnacksTabs.includes(activeTab)) {
+        setActiveTab('more');
+      } else if (activeTab !== 'dashboard') {
+        setActiveTab('dashboard');
       }
     }}>
 

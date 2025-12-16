@@ -571,7 +571,7 @@ const Expenses = ({ onNavigateBack }) => {
                                             <tr key={idx}>
                                                 <td className="px-3 py-2 font-medium">{item.name}</td>
                                                 <td className="px-3 py-2 text-right text-gray-600">{item.unit}</td>
-                                                <td className="px-3 py-2 text-right font-bold text-lg">{item.current.toFixed(1)}</td>
+                                                <td className="px-3 py-2 text-right font-bold text-lg">{item.current.toFixed(2)}</td>
                                                 <td className="px-3 py-2">
                                                     <div className="flex justify-center gap-2">
                                                         <button

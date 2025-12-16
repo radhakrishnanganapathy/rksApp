@@ -321,14 +321,14 @@ const Billing = () => {
                                 type="number"
                                 placeholder="Qty"
                                 value={currentQty}
-                                onChange={(e) => setCurrentQty(Number(e.target.value))}
+                                onChange={(e) => setCurrentQty(e.target.value)}
                                 className="border rounded p-2"
                             />
                             <input
                                 type="number"
                                 placeholder="Price"
                                 value={currentPrice}
-                                onChange={(e) => setCurrentPrice(Number(e.target.value))}
+                                onChange={(e) => setCurrentPrice(e.target.value)}
                                 className="border rounded p-2"
                             />
                         </div>
@@ -349,7 +349,7 @@ const Billing = () => {
                                 <div key={idx} className={`flex justify-between items-center border-b pb-2 last:border-0 ${editingItemIndex === idx ? 'bg-amber-50 p-2 rounded' : ''}`}>
                                     <div>
                                         <p className="font-medium">{item.name}</p>
-                                        <p className="text-xs text-gray-500">{item.qty} x {formatCurrency(item.price)}</p>
+                                        <p className="text-xs text-gray-500">{Number(item.qty).toFixed(2)} x {formatCurrency(item.price)}</p>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <span className="font-semibold">{formatCurrency(item.total)}</span>

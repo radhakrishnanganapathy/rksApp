@@ -211,7 +211,7 @@ const BillingList = ({ onEdit }) => {
                                                 <div key={idx} className="flex justify-between text-sm py-1">
                                                     <span className="font-medium text-gray-700">{prod.name}</span>
                                                     <div className="flex gap-4">
-                                                        <span className="w-16 text-right text-gray-600">{prod.qty.toFixed(2)}</span>
+                                                        <span className="w-16 text-right text-gray-600">{Number(prod.qty).toFixed(2)}</span>
                                                         <span className="w-20 text-right font-medium text-gray-800">{formatCurrency(prod.total)}</span>
                                                     </div>
                                                 </div>
@@ -225,7 +225,7 @@ const BillingList = ({ onEdit }) => {
                                                     <div key={idx} className="flex justify-between text-sm">
                                                         <span>{prod.name}</span>
                                                         <div className="flex gap-4">
-                                                            <span className="text-gray-600">{prod.qty} kg</span>
+                                                            <span className="text-gray-600">{Number(prod.qty).toFixed(2)} kg</span>
                                                             <span className="font-medium">{formatCurrency(prod.total || (prod.qty * prod.price))}</span>
                                                         </div>
                                                     </div>

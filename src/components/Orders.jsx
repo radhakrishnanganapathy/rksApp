@@ -373,7 +373,7 @@ const Orders = ({ onNavigateBack }) => {
                                 <div key={idx} className="flex justify-between items-center border-b pb-2 last:border-0">
                                     <div>
                                         <p className="font-medium">{item.name}</p>
-                                        <p className="text-xs text-gray-500">{item.qty} x {formatCurrency(item.price)}</p>
+                                        <p className="text-xs text-gray-500">{Number(item.qty).toFixed(2)} x {formatCurrency(item.price)}</p>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <span className="font-semibold">{formatCurrency(item.total)}</span>
@@ -471,7 +471,7 @@ const Orders = ({ onNavigateBack }) => {
                                     <p className="text-xs text-gray-500 mb-1">Items:</p>
                                     {order.items.map((item, idx) => (
                                         <p key={idx} className="text-sm">
-                                            {item.name} - {item.qty} x {formatCurrency(item.price)}
+                                            {item.name} - {Number(item.qty).toFixed(2)} x {formatCurrency(item.price)}
                                         </p>
                                     ))}
                                 </div>

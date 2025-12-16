@@ -23,6 +23,27 @@ export const DataProvider = ({ children }) => {
     const [items] = useState(ITEMS); // Keep for backward compatibility
     const [loading, setLoading] = useState(true);
 
+    // Farm Module State
+    const [farmCrops, setFarmCrops] = useState([]);
+    const [farmExpenses, setFarmExpenses] = useState([]);
+    const [farmIncome, setFarmIncome] = useState([]);
+    const [farmExpenseCategories, setFarmExpenseCategories] = useState([]);
+    const [farmTimeline, setFarmTimeline] = useState([]);
+    const [cropTypes, setCropTypes] = useState([]); // Crop Master List
+
+    // Previous Month Stock State
+    const [previousMonthItemStock, setPreviousMonthItemStock] = useState([]);
+    const [previousMonthRawMaterialStock, setPreviousMonthRawMaterialStock] = useState([]);
+
+    // Home Module State (Personal Finance)
+    const [homeIncome, setHomeIncome] = useState([]);
+    const [homeExpenses, setHomeExpenses] = useState([]);
+    const [homeExpenseItems, setHomeExpenseItems] = useState([]);
+    const [homeLoans, setHomeLoans] = useState([]);
+    const [homeLoanTransactions, setHomeLoanTransactions] = useState([]);
+    const [homeSavings, setHomeSavings] = useState([]);
+    const [homeSavingsTransactions, setHomeSavingsTransactions] = useState([]);
+
     // --- Data Mappers (Backend snake_case -> Frontend camelCase) ---
     const mapSale = (s) => ({
         ...s,
@@ -85,38 +106,109 @@ export const DataProvider = ({ children }) => {
     const refreshData = async () => {
         setLoading(true);
         try {
-            const endpoints = [
+            // Core HomeSnacks endpoints (required)
+            const coreEndpoints = [
                 'sales', 'production', 'expenses', 'stocks',
                 'customers', 'employees', 'attendance', 'orders',
                 'raw-material-purchases', 'raw-material-usage', 'raw-material-prices',
                 'products'
             ];
 
-            const responses = await Promise.all(
-                endpoints.map(endpoint => fetch(`${API_URL}/${endpoint}`))
+            // Farm endpoints (optional - may not exist on backend yet)
+            const farmEndpoints = [
+                'farm/crops', 'farm/expenses', 'farm/income', 'farm/expense-categories', 'farm/timeline',
+                'previous-month-stock/items', 'previous-month-stock/raw-materials'
+            ];
+
+            // Home endpoints
+            const homeEndpoints = ['home/income', 'home/expenses', 'home/expense-items', 'home/loans', 'home/savings', 'home/savings-transactions'];
+
+            // Fetch core data
+            const coreResponses = await Promise.all(
+                coreEndpoints.map(endpoint => fetch(`${API_URL}/${endpoint}`))
             );
 
-            // Check for errors
-            for (let i = 0; i < responses.length; i++) {
-                if (!responses[i].ok) {
-                    throw new Error(`Failed to fetch ${endpoints[i]}: ${responses[i].statusText}`);
+            // Check for errors in core endpoints
+            for (let i = 0; i < coreResponses.length; i++) {
+                if (!coreResponses[i].ok) {
+                    throw new Error(`Failed to fetch ${coreEndpoints[i]}: ${coreResponses[i].statusText}`);
                 }
             }
 
-            const data = await Promise.all(responses.map(res => res.json()));
+            const coreData = await Promise.all(coreResponses.map(res => res.json()));
 
-            setSales(data[0]?.map(mapSale) || []);
-            setProduction(data[1]?.map(mapProduction) || []);
-            setExpenses(data[2]?.map(mapExpense) || []);
-            setStocks(data[3] || { products: [], rawMaterials: [] });
-            setCustomers(data[4] || []);
-            setEmployees(data[5]?.map(mapEmployee) || []);
-            setAttendance(data[6]?.map(mapAttendance) || []);
-            setOrders(data[7]?.map(mapOrder) || []);
-            setRawMaterialPurchases(data[8]?.map(mapPurchase) || []);
-            setRawMaterialUsage(data[9]?.map(mapUsage) || []);
-            setRawMaterialPrices(data[10]?.map(mapRawMaterialPrice) || []);
-            setProducts(data[11] || []);
+            // Set core data
+            setSales(coreData[0]?.map(mapSale) || []);
+            setProduction(coreData[1]?.map(mapProduction) || []);
+            setExpenses(coreData[2]?.map(mapExpense) || []);
+            setStocks(coreData[3] || { products: [], rawMaterials: [] });
+            setCustomers(coreData[4] || []);
+            setEmployees(coreData[5]?.map(mapEmployee) || []);
+            setAttendance(coreData[6]?.map(mapAttendance) || []);
+            setOrders(coreData[7]?.map(mapOrder) || []);
+            setRawMaterialPurchases(coreData[8]?.map(mapPurchase) || []);
+            setRawMaterialUsage(coreData[9]?.map(mapUsage) || []);
+            setRawMaterialPrices(coreData[10]?.map(mapRawMaterialPrice) || []);
+            setProducts(coreData[11] || []);
+
+            // Try to fetch farm data (gracefully handle if endpoints don't exist)
+            try {
+                const farmResponses = await Promise.all(
+                    farmEndpoints.map(endpoint =>
+                        fetch(`${API_URL}/${endpoint}`).catch(() => ({ ok: false }))
+                    )
+                );
+
+                const farmData = await Promise.all(
+                    farmResponses.map((res, i) =>
+                        res.ok ? res.json().catch(() => []) : []
+                    )
+                );
+
+                setFarmCrops(farmData[0] || []);
+                setFarmExpenses(farmData[1] || []);
+                setFarmIncome(farmData[2] || []);
+                setFarmExpenseCategories(farmData[3] || []);
+                setFarmTimeline(farmData[4] || []);
+                setPreviousMonthItemStock(farmData[5] || []);
+                setPreviousMonthRawMaterialStock(farmData[6] || []);
+            } catch (farmError) {
+                console.log('Farm endpoints not available yet:', farmError.message);
+                // Set empty farm data
+                setFarmCrops([]);
+                setFarmExpenses([]);
+                setFarmIncome([]);
+                setFarmExpenseCategories([]);
+                setFarmTimeline([]);
+                setPreviousMonthItemStock([]);
+                setPreviousMonthRawMaterialStock([]);
+            }
+
+            // Fetch Home Data
+            try {
+                const homeResponses = await Promise.all(
+                    homeEndpoints.map(endpoint =>
+                        fetch(`${API_URL}/${endpoint}`).catch(() => ({ ok: false }))
+                    )
+                );
+                const homeData = await Promise.all(
+                    homeResponses.map(res =>
+                        res.ok ? res.json().catch(() => []) : []
+                    )
+                );
+                setHomeIncome(homeData[0] || []);
+                setHomeExpenses(homeData[1] || []);
+                setHomeExpenseItems(homeData[2] || []);
+                setHomeLoans(homeData[3]?.loans || []);
+                setHomeLoanTransactions(homeData[3]?.transactions || []);
+                setHomeSavings(homeData[4] || []);
+                setHomeSavingsTransactions(homeData[5] || []);
+            } catch (homeError) {
+                console.log('Home endpoints error:', homeError);
+                setHomeIncome([]);
+                setHomeExpenses([]);
+                setHomeExpenseItems([]);
+            }
         } catch (error) {
             console.error("Error fetching data:", error);
         } finally {
@@ -408,8 +500,12 @@ export const DataProvider = ({ children }) => {
                 throw new Error('Failed to fetch attendance');
             }
             const attendanceData = await attendanceRes.json();
-            setAttendance(attendanceData.map(mapAttendance));
-            console.log('Attendance marked successfully');
+            const mappedData = attendanceData.map(mapAttendance);
+            console.log('Fetched attendance data:', mappedData.length, 'records');
+            console.log('Sample record:', mappedData[0]);
+            // Force new array reference to trigger React re-render
+            setAttendance([...mappedData]);
+            console.log('Attendance state updated');
         } catch (err) {
             console.error("Error marking attendance:", err);
             alert(`Error marking attendance: ${err.message}`);
@@ -824,6 +920,317 @@ export const DataProvider = ({ children }) => {
         }
     };
 
+    // ========== FARM MODULE FUNCTIONS ==========
+
+    // Farm Crops CRUD
+    const addFarmCrop = async (data) => {
+        try {
+            const newCrop = { ...data, id: Date.now() };
+            await addItem('farm/crops', newCrop, setFarmCrops, farmCrops);
+        } catch (err) {
+            console.error('Error adding farm crop:', err);
+            throw err;
+        }
+    };
+
+    const updateFarmCrop = async (id, data) => {
+        try {
+            await updateItem('farm/crops', id, data, setFarmCrops, farmCrops);
+        } catch (err) {
+            console.error('Error updating farm crop:', err);
+            throw err;
+        }
+    };
+
+    const deleteFarmCrop = async (id) => {
+        try {
+            await deleteItem('farm/crops', id, setFarmCrops, farmCrops);
+        } catch (err) {
+            console.error('Error deleting farm crop:', err);
+            throw err;
+        }
+    };
+
+    // Farm Expenses CRUD
+    const addFarmExpense = async (data) => {
+        try {
+            const newExpense = { ...data, id: Date.now() };
+            const res = await fetch(`${API_URL}/farm/expenses`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newExpense)
+            });
+            const savedExpense = await res.json();
+            setFarmExpenses([savedExpense, ...farmExpenses]);
+        } catch (err) {
+            console.error('Error adding farm expense:', err);
+            throw err;
+        }
+    };
+
+    const updateFarmExpense = async (id, data) => {
+        try {
+            await updateItem('farm/expenses', id, data, setFarmExpenses, farmExpenses);
+        } catch (err) {
+            console.error('Error updating farm expense:', err);
+            throw err;
+        }
+    };
+
+    const deleteFarmExpense = async (id) => {
+        try {
+            await deleteItem('farm/expenses', id, setFarmExpenses, farmExpenses);
+        } catch (err) {
+            console.error('Error deleting farm expense:', err);
+            throw err;
+        }
+    };
+
+    // Farm Income CRUD
+    const addFarmIncome = async (data) => {
+        try {
+            const newIncome = { ...data, id: Date.now() };
+            await addItem('farm/income', newIncome, setFarmIncome, farmIncome);
+        } catch (err) {
+            console.error('Error adding farm income:', err);
+            throw err;
+        }
+    };
+
+    const updateFarmIncome = async (id, data) => {
+        try {
+            await updateItem('farm/income', id, data, setFarmIncome, farmIncome);
+        } catch (err) {
+            console.error('Error updating farm income:', err);
+            throw err;
+        }
+    };
+
+    const deleteFarmIncome = async (id) => {
+        try {
+            await deleteItem('farm/income', id, setFarmIncome, farmIncome);
+        } catch (err) {
+            console.error('Error deleting farm income:', err);
+            throw err;
+        }
+    };
+
+    // Farm Expense Categories CRUD
+    const addFarmExpenseCategory = async (data) => {
+        try {
+            const newCategory = { ...data, id: Date.now(), subcategories: [] };
+            const res = await fetch(`${API_URL}/farm/expense-categories`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newCategory)
+            });
+            const savedCategory = await res.json();
+            setFarmExpenseCategories([...farmExpenseCategories, savedCategory]);
+        } catch (err) {
+            console.error('Error adding farm expense category:', err);
+            throw err;
+        }
+    };
+
+    const updateFarmExpenseCategory = async (id, data) => {
+        try {
+            await updateItem('farm/expense-categories', id, data, setFarmExpenseCategories, farmExpenseCategories);
+        } catch (err) {
+            console.error('Error updating farm expense category:', err);
+            throw err;
+        }
+    };
+
+    const deleteFarmExpenseCategory = async (id) => {
+        try {
+            await deleteItem('farm/expense-categories', id, setFarmExpenseCategories, farmExpenseCategories);
+        } catch (err) {
+            console.error('Error deleting farm expense category:', err);
+            throw err;
+        }
+    };
+
+    // Farm Expense Subcategories CRUD
+    const addFarmExpenseSubcategory = async (data) => {
+        try {
+            const newSubcategory = { ...data, id: Date.now() };
+            const res = await fetch(`${API_URL}/farm/expense-subcategories`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newSubcategory)
+            });
+            const savedSubcategory = await res.json();
+
+            // Update the categories state to include the new subcategory
+            const categoriesRes = await fetch(`${API_URL}/farm/expense-categories`);
+            setFarmExpenseCategories(await categoriesRes.json());
+        } catch (err) {
+            console.error('Error adding farm expense subcategory:', err);
+            throw err;
+        }
+    };
+
+    const updateFarmExpenseSubcategory = async (id, data) => {
+        try {
+            const res = await fetch(`${API_URL}/farm/expense-subcategories/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            // Refresh categories to get updated subcategories
+            const categoriesRes = await fetch(`${API_URL}/farm/expense-categories`);
+            setFarmExpenseCategories(await categoriesRes.json());
+        } catch (err) {
+            console.error('Error updating farm expense subcategory:', err);
+            throw err;
+        }
+    };
+
+    const deleteFarmExpenseSubcategory = async (id) => {
+        try {
+            await fetch(`${API_URL}/farm/expense-subcategories/${id}`, { method: 'DELETE' });
+
+            // Refresh categories to get updated subcategories
+            const categoriesRes = await fetch(`${API_URL}/farm/expense-categories`);
+            setFarmExpenseCategories(await categoriesRes.json());
+        } catch (err) {
+            console.error('Error deleting farm expense subcategory:', err);
+            throw err;
+        }
+    };
+
+    // --- Farm Timeline Functions ---
+    const addFarmTimeline = async (data) => {
+        try {
+            const newTask = { ...data, id: Date.now() };
+            await addItem('farm/timeline', newTask, setFarmTimeline, farmTimeline);
+        } catch (err) {
+            console.error('Error adding farm timeline task:', err);
+            throw err;
+        }
+    };
+
+    const updateFarmTimeline = async (id, data) => {
+        try {
+            await updateItem('farm/timeline', id, data, setFarmTimeline, farmTimeline);
+        } catch (err) {
+            console.error('Error updating farm timeline task:', err);
+            throw err;
+        }
+    };
+
+    const deleteFarmTimeline = async (id) => {
+        try {
+            await deleteItem('farm/timeline', id, setFarmTimeline, farmTimeline);
+        } catch (err) {
+            console.error('Error deleting farm timeline task:', err);
+            throw err;
+        }
+    };
+
+    // --- Crop Types (Master List) Functions ---
+    const addCropType = (cropType) => {
+        const newCropType = { ...cropType, id: Date.now() };
+        setCropTypes([newCropType, ...cropTypes]);
+        return newCropType;
+    };
+
+    const updateCropType = (id, updatedData) => {
+        setCropTypes(cropTypes.map(ct => ct.id === id ? { ...updatedData, id } : ct));
+    };
+
+    const deleteCropType = (id) => {
+        setCropTypes(cropTypes.filter(ct => ct.id !== id));
+    };
+
+
+    // --- Home Module Functions ---
+    const addHomeIncome = (data) => addItem('home/income', { ...data, id: Date.now() }, setHomeIncome, homeIncome);
+    const updateHomeIncome = (id, data) => updateItem('home/income', id, data, setHomeIncome, homeIncome);
+    const deleteHomeIncome = (id) => deleteItem('home/income', id, setHomeIncome, homeIncome);
+
+    const addHomeExpense = (data) => addItem('home/expenses', { ...data, id: Date.now() }, setHomeExpenses, homeExpenses);
+    const updateHomeExpense = (id, data) => updateItem('home/expenses', id, data, setHomeExpenses, homeExpenses);
+    const deleteHomeExpense = (id) => deleteItem('home/expenses', id, setHomeExpenses, homeExpenses);
+
+    const addHomeExpenseItem = (data) => addItem('home/expense-items', { ...data, id: Date.now() }, setHomeExpenseItems, homeExpenseItems);
+    const updateHomeExpenseItem = (id, data) => updateItem('home/expense-items', id, data, setHomeExpenseItems, homeExpenseItems);
+    const deleteHomeExpenseItem = (id) => deleteItem('home/expense-items', id, setHomeExpenseItems, homeExpenseItems);
+
+    // Home Loans Functions
+    const addHomeLoan = (data) => addItem('home/loans', { ...data, id: Date.now() }, setHomeLoans, homeLoans);
+    const updateHomeLoan = (id, data) => updateItem('home/loans', id, data, setHomeLoans, homeLoans);
+    const deleteHomeLoan = (id) => deleteItem('home/loans', id, setHomeLoans, homeLoans);
+
+    // Home Savings Functions
+    const addHomeSaving = (data) => addItem('home/savings', { ...data, id: Date.now() }, setHomeSavings, homeSavings);
+    const updateHomeSaving = (id, data) => updateItem('home/savings', id, data, setHomeSavings, homeSavings);
+    const deleteHomeSaving = (id) => deleteItem('home/savings', id, setHomeSavings, homeSavings);
+
+    const addHomeSavingTransaction = async (data) => {
+        try {
+            const res = await fetch(`${API_URL}/home/savings-transactions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...data, id: Date.now() })
+            });
+            const savedTx = await res.json();
+            setHomeSavingsTransactions([savedTx, ...homeSavingsTransactions]);
+
+            // Refetch savings to update balance
+            const savingsRes = await fetch(`${API_URL}/home/savings`);
+            setHomeSavings(await savingsRes.json());
+        } catch (err) {
+            console.error("Error adding saving transaction:", err);
+        }
+    };
+
+    const deleteHomeSavingTransaction = async (id) => {
+        try {
+            await fetch(`${API_URL}/home/savings-transactions/${id}`, { method: 'DELETE' });
+            setHomeSavingsTransactions(homeSavingsTransactions.filter(t => t.id !== id));
+
+            // Refetch savings to update balance
+            const savingsRes = await fetch(`${API_URL}/home/savings`);
+            setHomeSavings(await savingsRes.json());
+        } catch (err) {
+            console.error("Error deleting saving transaction:", err);
+        }
+    };
+
+    const addHomeLoanTransaction = async (data) => {
+        try {
+            const res = await fetch(`${API_URL}/home/loan-transactions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...data, id: Date.now() })
+            });
+            const savedTx = await res.json();
+            setHomeLoanTransactions([savedTx, ...homeLoanTransactions]);
+
+            // Refetch loans to update current balance
+            const loansRes = await fetch(`${API_URL}/home/loans`);
+            const loansData = await loansRes.json();
+            setHomeLoans(loansData.loans);
+        } catch (err) {
+            console.error("Error adding loan transaction:", err);
+        }
+    };
+
+    const deleteHomeLoanTransaction = async (id) => {
+        try {
+            await fetch(`${API_URL}/home/loan-transactions/${id}`, { method: 'DELETE' });
+            setHomeLoanTransactions(homeLoanTransactions.filter(t => t.id !== id));
+
+            // Refetch loans to update current balance
+            const loansRes = await fetch(`${API_URL}/home/loans`);
+            const loansData = await loansRes.json();
+            setHomeLoans(loansData.loans);
+        } catch (err) {
+            console.error("Error deleting loan transaction:", err);
+        }
+    };
 
     return (
         <DataContext.Provider value={{
@@ -839,6 +1246,25 @@ export const DataProvider = ({ children }) => {
             rawMaterialUsage, addRawMaterialUsage, deleteRawMaterialUsage, updateRawMaterialUsage,
             rawMaterialPrices, addRawMaterialPrice, updateRawMaterialPrice, deleteRawMaterialPrice,
             products, addProduct, updateProduct, deleteProduct,
+            // Farm Module
+            farmCrops, addFarmCrop, updateFarmCrop, deleteFarmCrop,
+            farmExpenses, addFarmExpense, updateFarmExpense, deleteFarmExpense,
+            farmIncome, addFarmIncome, updateFarmIncome, deleteFarmIncome,
+            farmExpenseCategories, addFarmExpenseCategory, updateFarmExpenseCategory, deleteFarmExpenseCategory,
+            addFarmExpenseSubcategory, updateFarmExpenseSubcategory, deleteFarmExpenseSubcategory,
+            farmTimeline, addFarmTimeline, updateFarmTimeline, deleteFarmTimeline,
+            cropTypes, addCropType, updateCropType, deleteCropType,
+            // Previous Month Stock
+            previousMonthItemStock,
+            previousMonthRawMaterialStock,
+            // Home Module
+            homeIncome, addHomeIncome, updateHomeIncome, deleteHomeIncome,
+            homeExpenses, addHomeExpense, updateHomeExpense, deleteHomeExpense,
+            homeExpenseItems, addHomeExpenseItem, updateHomeExpenseItem, deleteHomeExpenseItem,
+            homeLoans, addHomeLoan, updateHomeLoan, deleteHomeLoan,
+            homeLoanTransactions, addHomeLoanTransaction, deleteHomeLoanTransaction,
+            homeSavings, addHomeSaving, updateHomeSaving, deleteHomeSaving,
+            homeSavingsTransactions, addHomeSavingTransaction, deleteHomeSavingTransaction,
             items,
             loading, refreshData
         }}>

@@ -126,7 +126,7 @@ const LastBuy = ({ onNavigateBack }) => {
                                         {purchase.items.map((item, idx) => (
                                             <div key={idx} className="flex justify-between text-sm bg-white bg-opacity-50 p-2 rounded">
                                                 <span className="font-medium text-gray-700">{item.name}</span>
-                                                <span className="text-gray-600">{item.qty} kg</span>
+                                                <span className="text-gray-600">{Number(item.qty).toFixed(2)} kg</span>
                                             </div>
                                         ))}
                                     </div>

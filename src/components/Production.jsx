@@ -18,6 +18,7 @@ const Production = ({ onNavigateBack }) => {
     // --- Filters ---
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedItemFilter, setSelectedItemFilter] = useState('');
 
     // Filter active products for autocomplete
     const activeProducts = products.filter(p => p.active);
@@ -77,7 +78,13 @@ const Production = ({ onNavigateBack }) => {
         }
     };
 
-    const filteredProduction = useMemo(() => filterByMonthYear(production, selectedMonth, selectedYear), [production, selectedMonth, selectedYear]);
+    const filteredProduction = useMemo(() => {
+        let data = filterByMonthYear(production, selectedMonth, selectedYear);
+        if (selectedItemFilter) {
+            data = data.filter(p => p.item === selectedItemFilter);
+        }
+        return data;
+    }, [production, selectedMonth, selectedYear, selectedItemFilter]);
 
     const totalProduction = filteredProduction.reduce((sum, p) => sum + Number(p.qty), 0);
     const totalPacked = filteredProduction.reduce((sum, p) => sum + Number(p.packedQty || 0), 0);
@@ -186,22 +193,28 @@ const Production = ({ onNavigateBack }) => {
                         <div className="text-right">
                             <p className="text-xs text-gray-500">Total Raw / Packed</p>
                             <p className="font-bold text-blue-600">
-                                {totalProduction.toFixed(1)} / <span className="text-green-600">{totalPacked.toFixed(1)}</span> kg
+                                {totalProduction.toFixed(2)} / <span className="text-green-600">{totalPacked.toFixed(2)}</span> kg
                             </p>
                         </div>
                     </div>
 
                     {/* Filters */}
-                    <div className="flex gap-2">
-                        <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="border rounded p-1 text-sm flex-1">
+                    <div className="flex gap-2 flex-wrap">
+                        <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="border rounded p-1 text-sm flex-1 min-w-[100px]">
                             {Array.from({ length: 12 }, (_, i) => (
                                 <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
                             ))}
                         </select>
-                        <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="border rounded p-1 text-sm flex-1">
+                        <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="border rounded p-1 text-sm flex-1 min-w-[80px]">
                             <option value="2023">2023</option>
                             <option value="2024">2024</option>
                             <option value="2025">2025</option>
+                        </select>
+                        <select value={selectedItemFilter} onChange={(e) => setSelectedItemFilter(e.target.value)} className="border rounded p-1 text-sm flex-1 min-w-[120px]">
+                            <option value="">All Items</option>
+                            {products.map((p) => (
+                                <option key={p.id} value={p.name}>{p.name}</option>
+                            ))}
                         </select>
                     </div>
 
