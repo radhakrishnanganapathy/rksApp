@@ -469,7 +469,7 @@ const Dashboard = () => {
                         <Package className="text-purple-600" size={20} />
                         <p className="text-sm font-medium text-gray-600">Kg After Pack</p>
                     </div>
-                    <p className="text-2xl font-bold text-gray-800">{totalPackedQty} kg</p>
+                    <p className="text-2xl font-bold text-gray-800">{safeNum(totalPackedQty).toFixed(2)} kg</p>
                 </div>
 
                 {/* Row 3: Sales in Kg & Sales in Rs */}
