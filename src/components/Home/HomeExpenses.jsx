@@ -12,6 +12,7 @@ const HomeExpenses = ({ onNavigateBack }) => {
     const [amount, setAmount] = useState('');
     const [category, setCategory] = useState('');
     const [editingId, setEditingId] = useState(null);
+    const [selectedDropdownCategory, setSelectedDropdownCategory] = useState('');
     const [showForm, setShowForm] = useState(false);
 
     // Group items by category for the dropdown (filter only expenses)
@@ -25,12 +26,18 @@ const HomeExpenses = ({ onNavigateBack }) => {
 
     const sortedCategories = Object.keys(groupedItems).sort();
 
-    const handleItemSelect = (e) => {
+    const handleCategoryDropdownChange = (e) => {
+        const cat = e.target.value;
+        setSelectedDropdownCategory(cat);
+        setCategory(cat);
+        setDescription(''); // Reset sub-category selection
+    };
+
+    const handleSubCategoryDropdownChange = (e) => {
         const value = e.target.value;
         if (!value) return;
 
         const [selectedCat, selectedName] = value.split(':::');
-        setCategory(selectedCat);
         setDescription(selectedName);
     };
 
@@ -56,6 +63,7 @@ const HomeExpenses = ({ onNavigateBack }) => {
         setDescription('');
         setAmount('');
         setCategory('');
+        setSelectedDropdownCategory('');
         setDate(new Date().toISOString().split('T')[0]);
         setShowForm(false);
     };
@@ -66,6 +74,7 @@ const HomeExpenses = ({ onNavigateBack }) => {
         setDescription(item.description || '');
         setAmount(item.amount);
         setCategory(item.category || '');
+        setSelectedDropdownCategory(item.category || '');
         setShowForm(true);
     };
 
@@ -107,6 +116,7 @@ const HomeExpenses = ({ onNavigateBack }) => {
                                 setDescription('');
                                 setAmount('');
                                 setCategory('');
+                                setSelectedDropdownCategory('');
                                 setShowForm(false);
                             }}
                             className="text-xs text-gray-500 flex items-center gap-1"
@@ -123,26 +133,39 @@ const HomeExpenses = ({ onNavigateBack }) => {
                             className="w-full border rounded p-2"
                         />
 
-                        {/* Expense Item Selection */}
+                        {/* Category Selection */}
                         <div>
-                            <label className="block text-xs text-gray-500 mb-1">Select Expense Item</label>
+                            <label className="block text-xs text-gray-500 mb-1">Select Category</label>
                             <select
-                                onChange={handleItemSelect}
+                                onChange={handleCategoryDropdownChange}
                                 className="w-full border rounded p-2 bg-gray-50"
-                                defaultValue=""
+                                value={selectedDropdownCategory}
                             >
-                                <option value="">-- Select Item --</option>
+                                <option value="">-- Select Category --</option>
                                 {sortedCategories.map(cat => (
-                                    <optgroup key={cat} label={cat}>
-                                        {groupedItems[cat].map(item => (
-                                            <option key={item.id} value={`${item.category}:::${item.name}`}>
-                                                {item.name}
-                                            </option>
-                                        ))}
-                                    </optgroup>
+                                    <option key={cat} value={cat}>{cat}</option>
                                 ))}
                             </select>
                         </div>
+
+                        {/* Sub-Category Selection */}
+                        {selectedDropdownCategory && (
+                            <div>
+                                <label className="block text-xs text-gray-500 mb-1">Select Item (Sub-Category)</label>
+                                <select
+                                    onChange={handleSubCategoryDropdownChange}
+                                    className="w-full border rounded p-2 bg-gray-50"
+                                    defaultValue=""
+                                >
+                                    <option value="">-- Select Item --</option>
+                                    {groupedItems[selectedDropdownCategory]?.map(item => (
+                                        <option key={item.id} value={`${item.category}:::${item.name}`}>
+                                            {item.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-2">
                             <div>
@@ -187,7 +210,8 @@ const HomeExpenses = ({ onNavigateBack }) => {
                         {editingId ? 'Update Expense' : 'Add Expense'}
                     </button>
                 </div>
-            )}
+            )
+            }
 
             {/* List */}
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -220,7 +244,7 @@ const HomeExpenses = ({ onNavigateBack }) => {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

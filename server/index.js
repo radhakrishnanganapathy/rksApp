@@ -651,6 +651,23 @@ const initializeTables = async () => {
     }
 };
 
+// Serve static files from the React app
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
+// Initialize tables
+initializeTables().then(() => {
+    console.log('Database tables initialized');
+}).catch(err => {
+    console.error('Failed to initialize database tables:', err);
+});
+
 // --- Customers ---
 app.get('/api/customers', async (req, res) => {
     try {
@@ -2729,9 +2746,141 @@ initializeTables().then(() => {
             res.status(500).json({ error: err.message });
         }
     });
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+    // --- Backup & Restore ---
+
+    // 1. Export Data (JSON)
+    app.get('/api/backup/export', async (req, res) => {
+        try {
+            const tablesQuery = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'";
+            const tablesResult = await db.query(tablesQuery);
+            const tables = tablesResult.rows.map(row => row.table_name);
+
+            const exportData = {};
+
+            for (const table of tables) {
+                const dataResult = await db.query(`SELECT * FROM ${table}`);
+                exportData[table] = dataResult.rows;
+            }
+
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Content-Disposition', 'attachment; filename=rks_data_export.json');
+            res.json(exportData);
+        } catch (err) {
+            console.error('Export Error:', err);
+            res.status(500).json({ error: err.message });
+        }
     });
+
+    // 2. Import Data (JSON)
+    app.post('/api/backup/import', async (req, res) => {
+        const data = req.body;
+        const results = { success: [], errors: [] };
+
+        try {
+            await db.query('BEGIN'); // Start transaction
+
+            for (const [tableName, rows] of Object.entries(data)) {
+                if (!Array.isArray(rows) || rows.length === 0) continue;
+
+                // Get columns for the table to ensure we match the schema
+                const columnsQuery = `
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = $1
+            `;
+                const columnsResult = await db.query(columnsQuery, [tableName]);
+                const validColumns = columnsResult.rows.map(row => row.column_name);
+
+                if (validColumns.length === 0) {
+                    results.errors.push(`Table ${tableName} not found or has no columns.`);
+                    continue;
+                }
+
+                let insertedCount = 0;
+
+                for (const row of rows) {
+                    // Filter row keys to only include valid columns
+                    const rowData = {};
+                    const keys = [];
+                    const values = [];
+                    let paramCount = 1;
+
+                    validColumns.forEach(col => {
+                        if (row.hasOwnProperty(col)) {
+                            keys.push(col);
+                            values.push(row[col]);
+                            rowData[col] = row[col]; // For logging if needed
+                        }
+                    });
+
+                    if (keys.length === 0) continue;
+
+                    const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
+                    const query = `
+                    INSERT INTO ${tableName} (${keys.join(', ')}) 
+                    VALUES (${placeholders}) 
+                    ON CONFLICT DO NOTHING
+                `;
+
+                    try {
+                        await db.query(query, values);
+                        insertedCount++;
+                    } catch (insertErr) {
+                        console.error(`Error inserting into ${tableName}:`, insertErr.message);
+                        // Don't fail the whole import, just log
+                    }
+                }
+                results.success.push(`Imported ${insertedCount} records into ${tableName}`);
+            }
+
+            await db.query('COMMIT');
+            res.json({ message: 'Import completed', details: results });
+        } catch (err) {
+            await db.query('ROLLBACK');
+            console.error('Import Error:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // 3. Dump DB (SQL)
+    const { exec } = require('child_process');
+
+    app.get('/api/backup/dump', (req, res) => {
+        const { PGUSER, PGPASSWORD, PGHOST, PGPORT, PGDATABASE } = process.env;
+
+        // Construct pg_dump command
+        // We use PGPASSWORD env var for password to avoid putting it in command line args if possible, 
+        // but exec inherits env so it should be fine if set in process.env
+
+        const dumpCommand = `PGPASSWORD='${PGPASSWORD}' pg_dump -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -d ${PGDATABASE} --inserts --clean --if-exists`;
+
+        const child = exec(dumpCommand, { maxBuffer: 1024 * 1024 * 50 }); // 50MB buffer
+
+        res.setHeader('Content-Type', 'application/sql');
+        res.setHeader('Content-Disposition', `attachment; filename=rks_backup_${new Date().toISOString().split('T')[0]}.sql`);
+
+        child.stdout.pipe(res);
+
+        child.stderr.on('data', (data) => {
+            console.error('pg_dump stderr:', data);
+        });
+
+        child.on('error', (err) => {
+            console.error('pg_dump error:', err);
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Backup failed' });
+            }
+        });
+    });
+
+    // Only start server if running directly (not imported)
+    if (require.main === module) {
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    }
+
+    module.exports = app;
 
     // Keep process alive
     setInterval(() => { }, 10000);

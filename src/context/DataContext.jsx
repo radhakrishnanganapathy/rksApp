@@ -6,7 +6,7 @@ const DataContext = createContext();
 export const useData = () => useContext(DataContext);
 
 export const DataProvider = ({ children }) => {
-    const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
+    const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
 
     const [sales, setSales] = useState([]);
     const [production, setProduction] = useState([]);
