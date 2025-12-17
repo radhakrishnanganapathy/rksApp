@@ -5,7 +5,7 @@ import { MoreVertical, Download, Upload, Database } from 'lucide-react';
 const Layout = ({ children, activeTab, setActiveTab, businessMode, setBusinessMode }) => {
     const [showMenu, setShowMenu] = useState(false);
     const fileInputRef = useRef(null);
-    const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/api\/?$/, '');
+    const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
 
     const handleExport = () => {
         window.location.href = `${API_URL}/api/backup/export`;
