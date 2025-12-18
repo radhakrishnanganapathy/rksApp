@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Server, Download } from 'lucide-react';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
 
 const DbUsageCard = () => {
     const [dbUsage, setDbUsage] = useState(null);
@@ -22,13 +24,6 @@ const DbUsageCard = () => {
                 });
 
                 if (response.ok) {
-                    // Create a blob from the response
-                    const blob = await response.blob();
-                    // Create a link element
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-
                     // Get filename from header or default
                     const contentDisposition = response.headers.get('Content-Disposition');
                     let filename = 'backup.sql';
@@ -37,7 +32,6 @@ const DbUsageCard = () => {
                         if (filenameMatch && filenameMatch.length === 2)
                             filename = filenameMatch[1];
                     } else {
-                        // Fallback filename generation
                         const date = new Date();
                         const year = date.getFullYear();
                         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -45,22 +39,64 @@ const DbUsageCard = () => {
                         filename = `${year}${month}${day}.sql`;
                     }
 
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
+                    const blob = await response.blob();
 
-                    // Cleanup
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-
-                    alert('Database dump started!');
+                    if (Capacitor.isNativePlatform()) {
+                        // Native (Android/iOS) Download
+                        const reader = new FileReader();
+                        reader.readAsDataURL(blob);
+                        reader.onloadend = async () => {
+                            const base64data = reader.result.split(',')[1];
+                            try {
+                                // Try saving to Downloads folder (Android)
+                                await Filesystem.writeFile({
+                                    path: `Download/${filename}`,
+                                    data: base64data,
+                                    directory: Directory.ExternalStorage,
+                                    recursive: true
+                                });
+                                alert(`Database dumped successfully to Downloads folder!\nFile: ${filename}`);
+                            } catch (writeError) {
+                                // Fallback to Documents
+                                try {
+                                    await Filesystem.writeFile({
+                                        path: filename,
+                                        data: base64data,
+                                        directory: Directory.Documents,
+                                        encoding: Encoding.UTF8
+                                    });
+                                    alert(`Database dumped successfully to Documents!\nFile: ${filename}`);
+                                } catch (fallbackError) {
+                                    console.error('File write error:', writeError, fallbackError);
+                                    alert(`Failed to save file to device: ${writeError.message}`);
+                                }
+                            }
+                        };
+                    } else {
+                        // Web Download
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        alert('Database dump started!');
+                    }
                 } else {
-                    const data = await response.json();
-                    alert(`Failed to dump database: ${data.error || 'Unknown error'}`);
+                    let errorMessage = 'Unknown error';
+                    try {
+                        const data = await response.json();
+                        errorMessage = data.error || JSON.stringify(data);
+                    } catch (e) {
+                        errorMessage = await response.text();
+                    }
+                    alert(`Failed to dump database: ${errorMessage}`);
                 }
             } catch (error) {
                 console.error('Error dumping database:', error);
-                alert('An error occurred while dumping the database.');
+                alert(`An error occurred while dumping the database: ${error.message}`);
             } finally {
                 setIsDumping(false);
             }
