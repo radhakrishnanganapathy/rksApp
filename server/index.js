@@ -2802,6 +2802,27 @@ initializeTables().then(() => {
             res.status(500).json({ error: err.message });
         }
     });
+    // Database Usage Endpoint
+    app.get('/api/db-usage', async (req, res) => {
+        try {
+            const result = await db.query('SELECT pg_database_size(current_database()) as size_bytes;');
+            const sizeBytes = Number(result.rows[0].size_bytes);
+            const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(2);
+            const limitMB = 100; // Render Free Tier Limit
+            const percentage = ((sizeMB / limitMB) * 100).toFixed(2);
+
+            res.json({
+                sizeBytes,
+                sizeMB,
+                limitMB,
+                percentage
+            });
+        } catch (err) {
+            console.error('Error fetching DB usage:', err);
+            res.status(500).json({ error: 'Failed to fetch DB usage' });
+        }
+    });
+
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
