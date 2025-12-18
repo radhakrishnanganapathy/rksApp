@@ -1207,12 +1207,16 @@ export const DataProvider = ({ children }) => {
                 body: JSON.stringify({ ...data, id: Date.now() })
             });
             const savedTx = await res.json();
-            setHomeLoanTransactions([savedTx, ...homeLoanTransactions]);
+            // Optimistic update
+            setHomeLoanTransactions(prev => [savedTx, ...prev]);
 
-            // Refetch loans to update current balance
+            // Refetch loans AND transactions to ensure consistency
             const loansRes = await fetch(`${API_URL}/home/loans`);
             const loansData = await loansRes.json();
             setHomeLoans(loansData.loans);
+            if (loansData.transactions) {
+                setHomeLoanTransactions(loansData.transactions);
+            }
         } catch (err) {
             console.error("Error adding loan transaction:", err);
         }
@@ -1221,12 +1225,15 @@ export const DataProvider = ({ children }) => {
     const deleteHomeLoanTransaction = async (id) => {
         try {
             await fetch(`${API_URL}/home/loan-transactions/${id}`, { method: 'DELETE' });
-            setHomeLoanTransactions(homeLoanTransactions.filter(t => t.id !== id));
+            setHomeLoanTransactions(prev => prev.filter(t => t.id !== id));
 
-            // Refetch loans to update current balance
+            // Refetch loans AND transactions to ensure consistency
             const loansRes = await fetch(`${API_URL}/home/loans`);
             const loansData = await loansRes.json();
             setHomeLoans(loansData.loans);
+            if (loansData.transactions) {
+                setHomeLoanTransactions(loansData.transactions);
+            }
         } catch (err) {
             console.error("Error deleting loan transaction:", err);
         }

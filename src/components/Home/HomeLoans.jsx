@@ -148,32 +148,20 @@ const HomeLoans = ({ onNavigateBack }) => {
     const handleAddPayment = async () => {
         if (!payAmount) return alert('Please enter amount');
 
-        // Logic:
-        // 1. If Principal Repay is manually entered, use it.
-        // 2. If Interest Pay is manually entered, use it.
-        // 3. If neither, assume standard amortization for EMI:
-        //    Interest = Balance * Rate / 100
-        //    Principal = Amount - Interest
-
         let interestPart = 0;
         let principalPart = 0;
 
         if (payPrincipal && payInterest) {
-            // User specified both
             principalPart = Number(payPrincipal);
             interestPart = Number(payInterest);
         } else if (payPrincipal) {
-            // User specified Principal, rest is Interest
             principalPart = Number(payPrincipal);
             interestPart = Number(payAmount) - principalPart;
         } else if (payInterest) {
-            // User specified Interest, rest is Principal
             interestPart = Number(payInterest);
             principalPart = Number(payAmount) - interestPart;
         } else {
-            // Auto-calculate based on Amortization (Standard EMI behavior)
             const calculatedInterest = calculateMonthlyInterest(selectedLoan.current_balance, selectedLoan.interest_rate);
-
             if (Number(payAmount) >= calculatedInterest) {
                 interestPart = calculatedInterest;
                 principalPart = Number(payAmount) - calculatedInterest;
@@ -194,10 +182,8 @@ const HomeLoans = ({ onNavigateBack }) => {
 
         await addHomeLoanTransaction(txData);
 
-        // Reduce Balance by TOTAL Payment Amount (as per user request for Gold Loan logic)
-        // "if i entresd intrest paay click play ment substract that amt from outstaning balcne"
-        // This implies the balance tracks total debt (Principal + Interest).
-        const newBalance = Number(selectedLoan.current_balance) - Number(payAmount);
+        // Reduce Balance by PRINCIPAL Repay Amount ONLY
+        const newBalance = Number(selectedLoan.current_balance) - principalPart;
 
         await updateHomeLoan(selectedLoan.id, {
             ...selectedLoan,
@@ -209,7 +195,7 @@ const HomeLoans = ({ onNavigateBack }) => {
         setPayInterest('');
         setPayPrincipal('');
         setPayDesc('');
-        alert(`Payment Recorded. Balance Reduced by ${formatCurrency(payAmount)}`);
+        alert(`Payment Recorded. Balance Reduced by ${formatCurrency(principalPart)}`);
     };
 
     const handleMarkPaidThisMonth = async (loan) => {
@@ -308,8 +294,8 @@ const HomeLoans = ({ onNavigateBack }) => {
                                         <h3 className="font-bold text-gray-800">{loan.name}</h3>
                                         <p className="text-xs text-gray-500">{loan.account_number}</p>
                                         <span className={`text-xs px-2 py-0.5 rounded-full ${loan.loan_type === 'emi' ? 'bg-purple-100 text-purple-700' :
-                                                loan.loan_type === 'gold' ? 'bg-yellow-100 text-yellow-700' :
-                                                    'bg-blue-100 text-blue-700'
+                                            loan.loan_type === 'gold' ? 'bg-yellow-100 text-yellow-700' :
+                                                'bg-blue-100 text-blue-700'
                                             }`}>
                                             {loan.loan_type === 'emi' ? 'Bank EMI' : loan.loan_type === 'gold' ? 'Gold Loan' : 'Interest Only'}
                                         </span>
@@ -458,7 +444,7 @@ const HomeLoans = ({ onNavigateBack }) => {
                                 <p className="text-2xl font-bold mt-1 text-yellow-400">
                                     {(() => {
                                         const interestPaid = homeLoanTransactions
-                                            .filter(t => t.loan_id === selectedLoan.id && (t.type === 'payment' || t.type === 'emi_payment'))
+                                            .filter(t => t.loan_id == selectedLoan.id && (t.type === 'payment' || t.type === 'emi_payment'))
                                             .reduce((sum, t) => sum + Number(t.interest_component || 0), 0);
                                         return formatCurrency(interestPaid);
                                     })()}
@@ -466,34 +452,37 @@ const HomeLoans = ({ onNavigateBack }) => {
                             </div>
                         </div>
                         <div className="mt-6 grid grid-cols-2 gap-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-gray-400 text-xs">Principal Amount</p>
-                                    <p className="font-medium">{formatCurrency(selectedLoan.principal_amount)}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-gray-400 text-xs">Due</p>
-                                    <p className="font-medium text-yellow-200">
-                                        {formatCurrency(calculateMonthlyInterest(selectedLoan.current_balance, selectedLoan.interest_rate))}
-                                    </p>
-                                </div>
+                            <div className="flex flex-col">
+                                <p className="text-gray-400 text-xs">Principal Amount</p>
+                                <p className="font-medium">{formatCurrency(selectedLoan.principal_amount)}</p>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <p className="text-gray-400 text-xs">Due</p>
+                                <p className="font-medium text-yellow-200">
+                                    {formatCurrency(calculateMonthlyInterest(selectedLoan.current_balance, selectedLoan.interest_rate))}
+                                </p>
                             </div>
 
                             {selectedLoan.loan_type === 'emi' && (
                                 <>
-                                    <div>
+                                    <div className="flex flex-col">
                                         <p className="text-gray-400 text-xs">EMI Amount</p>
                                         <p className="font-medium">{formatCurrency(selectedLoan.emi_amount)}</p>
                                     </div>
-                                    <div>
+                                    <div className="flex flex-col items-end">
                                         <p className="text-gray-400 text-xs">Due Date</p>
                                         <p className="font-medium">{selectedLoan.due_date ? `${selectedLoan.due_date}th of month` : 'N/A'}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-gray-400 text-xs">Tenure</p>
-                                        <p className="font-medium">{selectedLoan.tenure_months ? `${selectedLoan.tenure_months} Months` : 'N/A'}</p>
+                                    <div className="flex flex-col">
+                                        <p className="text-gray-400 text-xs">Tenure (Paid/Total)</p>
+                                        <p className="font-medium">
+                                            {(() => {
+                                                const paidMonths = homeLoanTransactions.filter(t => t.loan_id == selectedLoan.id && (t.type === 'payment' || t.type === 'emi_payment')).length;
+                                                return `${paidMonths} Paid / ${selectedLoan.tenure_months || '-'} Total`;
+                                            })()}
+                                        </p>
                                     </div>
-                                    <div>
+                                    <div className="flex flex-col items-end">
                                         <p className="text-gray-400 text-xs">End Date</p>
                                         <p className="font-medium">{selectedLoan.end_date ? new Date(selectedLoan.end_date).toLocaleDateString() : 'N/A'}</p>
                                     </div>
@@ -515,12 +504,22 @@ const HomeLoans = ({ onNavigateBack }) => {
                                     value={payAmount}
                                     onChange={e => {
                                         setPayAmount(e.target.value);
-                                        // Auto-calculate interest if not set
+                                        // Auto-calculate interest if not set or if user wants auto-calc
                                         const amt = Number(e.target.value);
                                         const estInt = calculateMonthlyInterest(selectedLoan.current_balance, selectedLoan.interest_rate);
-                                        if (!payInterest && !payPrincipal && amt >= estInt) {
-                                            setPayInterest(estInt);
-                                            setPayPrincipal(amt - estInt);
+
+                                        // Logic: Always suggest split, user can edit
+                                        if (amt > 0) {
+                                            if (amt >= estInt) {
+                                                setPayInterest(estInt.toFixed(2));
+                                                setPayPrincipal((amt - estInt).toFixed(2));
+                                            } else {
+                                                setPayInterest(amt.toFixed(2));
+                                                setPayPrincipal(0);
+                                            }
+                                        } else {
+                                            setPayInterest('');
+                                            setPayPrincipal('');
                                         }
                                     }}
                                     className="border rounded p-2 text-sm"
@@ -556,16 +555,11 @@ const HomeLoans = ({ onNavigateBack }) => {
                                 className="border rounded p-2 text-sm w-full"
                                 placeholder="Note (Optional)"
                             />
-                            <div className="grid grid-cols-2 gap-3">
-                                <button onClick={handleAddPayment} className="w-full bg-green-600 text-white py-2 rounded font-medium text-sm">
-                                    Add Payment
-                                </button>
-                                <button onClick={handleAddInterest} className="w-full bg-yellow-500 text-white py-2 rounded font-medium text-sm">
-                                    Add Interest
-                                </button>
-                            </div>
+                            <button onClick={handleAddPayment} className="w-full bg-green-600 text-white py-3 rounded font-medium text-sm">
+                                Record Payment
+                            </button>
                             <p className="text-xs text-gray-500 text-center">
-                                Principal Paid: <span className="font-bold text-gray-700">{formatCurrency(Number(payPrincipal) || (Number(payAmount) - Number(payInterest)))}</span>
+                                Balance will reduce by: <span className="font-bold text-gray-700">{formatCurrency(Number(payPrincipal) || 0)}</span>
                             </p>
                         </div>
                     </div>
@@ -577,7 +571,7 @@ const HomeLoans = ({ onNavigateBack }) => {
                         </div>
                         <div className="divide-y">
                             {homeLoanTransactions
-                                .filter(t => t.loan_id === selectedLoan.id)
+                                .filter(t => t.loan_id == selectedLoan.id)
                                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                                 .map(tx => (
                                     <div key={tx.id} className="p-3 flex justify-between items-center">
@@ -600,7 +594,7 @@ const HomeLoans = ({ onNavigateBack }) => {
                                     </div>
                                 ))
                             }
-                            {homeLoanTransactions.filter(t => t.loan_id === selectedLoan.id).length === 0 && (
+                            {homeLoanTransactions.filter(t => t.loan_id == selectedLoan.id).length === 0 && (
                                 <p className="p-4 text-center text-gray-500 text-sm">No transactions yet.</p>
                             )}
                         </div>
