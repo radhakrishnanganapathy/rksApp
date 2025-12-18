@@ -103,8 +103,8 @@ export const DataProvider = ({ children }) => {
         pricePerUnit: Number(p.price_per_unit)
     });
 
-    const refreshData = async () => {
-        setLoading(true);
+    const refreshData = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             // Core HomeSnacks endpoints (required)
             const coreEndpoints = [
@@ -700,6 +700,7 @@ export const DataProvider = ({ children }) => {
             const newItem = await res.json();
             const mappedItem = mapper ? mapper(newItem) : newItem;
             stateSetter([mappedItem, ...currentState]); // Assuming new items are added to the beginning
+            return mappedItem;
         } catch (err) {
             console.error(`Error adding to ${endpoint}:`, err);
             throw err;
@@ -1164,7 +1165,10 @@ export const DataProvider = ({ children }) => {
     const deleteHomeLoan = (id) => deleteItem('home/loans', id, setHomeLoans, homeLoans);
 
     // Home Savings Functions
-    const addHomeSaving = (data) => addItem('home/savings', { ...data, id: Date.now() }, setHomeSavings, homeSavings);
+    const addHomeSaving = async (data) => {
+        const newItem = { ...data, id: Date.now() };
+        return await addItem('home/savings', newItem, setHomeSavings, homeSavings);
+    };
     const updateHomeSaving = (id, data) => updateItem('home/savings', id, data, setHomeSavings, homeSavings);
     const deleteHomeSaving = (id) => deleteItem('home/savings', id, setHomeSavings, homeSavings);
 
@@ -1206,6 +1210,12 @@ export const DataProvider = ({ children }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...data, id: Date.now() })
             });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText);
+            }
+
             const savedTx = await res.json();
             // Optimistic update
             setHomeLoanTransactions(prev => [savedTx, ...prev]);
@@ -1219,6 +1229,7 @@ export const DataProvider = ({ children }) => {
             }
         } catch (err) {
             console.error("Error adding loan transaction:", err);
+            alert(`Failed to add transaction: ${err.message}`);
         }
     };
 

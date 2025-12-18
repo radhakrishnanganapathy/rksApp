@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { formatCurrency } from '../../utils';
 import { Wallet, TrendingUp, TrendingDown, Calendar, ChevronDown } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import HomeAISuggestions from './HomeAISuggestions';
 
 const HomeDashboard = () => {
     const { homeIncome, homeExpenses, homeLoans = [], sales = [], expenses = [], farmIncome = [], farmExpenses = [] } = useData();
@@ -10,6 +12,15 @@ const HomeDashboard = () => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [showDatePicker, setShowDatePicker] = useState(false);
+
+    // Global Data Type Selector
+    const [transactionType, setTransactionType] = useState('expense'); // 'expense' or 'income'
+
+    // Independent Drill-down States
+    const [pieCategory, setPieCategory] = useState(null);
+    const [listCategory, setListCategory] = useState(null);
+
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1'];
 
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
@@ -69,6 +80,56 @@ const HomeDashboard = () => {
     const totalMonthlyIncome = monthlyStats.home.inc + monthlyStats.snacks.inc + monthlyStats.farm.inc;
     const totalMonthlyExpenses = monthlyStats.home.exp + monthlyStats.snacks.exp + monthlyStats.farm.exp;
     const monthlyBalance = totalMonthlyIncome - totalMonthlyExpenses;
+
+    // Generic Data Fetcher for Charts
+    const getChartData = (categoryFilter) => {
+        const sourceData = transactionType === 'expense' ? homeExpenses : homeIncome;
+        let data = {};
+
+        if (categoryFilter) {
+            // Sub-category (Description) Data
+            data = sourceData
+                .filter(e => e.category === categoryFilter)
+                .reduce((acc, curr) => {
+                    const key = curr.description || 'Unspecified';
+                    acc[key] = (acc[key] || 0) + Number(curr.amount);
+                    return acc;
+                }, {});
+        } else {
+            // Main Category Data
+            data = sourceData.reduce((acc, curr) => {
+                const key = curr.category || 'Uncategorized';
+                acc[key] = (acc[key] || 0) + Number(curr.amount);
+                return acc;
+            }, {});
+        }
+
+        const total = Object.values(data).reduce((sum, val) => sum + val, 0);
+
+        return Object.entries(data)
+            .map(([name, value]) => ({
+                name,
+                value,
+                percent: total > 0 ? (value / total) * 100 : 0
+            }))
+            .sort((a, b) => b.value - a.value);
+    };
+
+    const pieData = getChartData(pieCategory);
+    const listData = getChartData(listCategory);
+
+    // Dynamic Color Logic (Red -> Green) for Progress Bars
+    const getSeverityColor = (index, totalLength) => {
+        // Palette: Red -> Orange -> Yellow -> Lime -> Green
+        const palette = ['#EF4444', '#F97316', '#EAB308', '#84CC16', '#22C55E'];
+        if (totalLength <= 1) return palette[0];
+
+        // Map index to palette range
+        const step = (palette.length - 1) / (totalLength - 1 || 1);
+        const paletteIndex = Math.min(Math.floor(index * step), palette.length - 1);
+
+        return palette[paletteIndex];
+    };
 
     return (
         <div className="space-y-6 pb-20">
@@ -207,6 +268,9 @@ const HomeDashboard = () => {
                 </div>
             </div>
 
+            {/* AI Suggestions */}
+            <HomeAISuggestions />
+
             {/* Loan Portfolio Section */}
             {activeLoans.length > 0 && (
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
@@ -253,28 +317,133 @@ const HomeDashboard = () => {
                 </div>
             )}
 
-            {/* Recent Activity Preview */}
+            {/* Chart Control Header */}
+            <div className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                <span className="font-semibold text-gray-700">Analytics</span>
+                <div className="flex bg-gray-100 p-1 rounded-lg">
+                    <button
+                        onClick={() => { setTransactionType('expense'); setPieCategory(null); setListCategory(null); }}
+                        className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${transactionType === 'expense' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Expense
+                    </button>
+                    <button
+                        onClick={() => { setTransactionType('income'); setPieCategory(null); setListCategory(null); }}
+                        className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${transactionType === 'income' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Income
+                    </button>
+                </div>
+            </div>
+
+            {/* 1. Pie Chart Section */}
             <div className="bg-white rounded-xl shadow-sm p-4">
-                <h3 className="font-semibold text-gray-700 mb-3">Recent Activity</h3>
-                <div className="space-y-3">
-                    {[...homeIncome.map(i => ({ ...i, type: 'income' })), ...homeExpenses.map(e => ({ ...e, type: 'expense' }))]
-                        .sort((a, b) => new Date(b.date) - new Date(a.date))
-                        .slice(0, 5)
-                        .map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-center border-b pb-2 last:border-0">
-                                <div>
-                                    <p className="font-medium text-gray-800">{item.description || item.category}</p>
-                                    <p className="text-xs text-gray-500">{new Date(item.date).toLocaleDateString()}</p>
-                                </div>
-                                <span className={`font-bold ${item.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                                    {item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}
-                                </span>
-                            </div>
-                        ))}
-                    {homeIncome.length === 0 && homeExpenses.length === 0 && (
-                        <p className="text-center text-gray-400 text-sm py-2">No recent activity</p>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-semibold text-gray-700">
+                        {pieCategory ? `${pieCategory} Breakdown` : `${transactionType === 'expense' ? 'Expense' : 'Income'} Distribution`}
+                    </h3>
+                    {pieCategory && (
+                        <button
+                            onClick={() => setPieCategory(null)}
+                            className="text-xs bg-gray-100 px-2 py-1 rounded hover:bg-gray-200 text-gray-600"
+                        >
+                            ← Back
+                        </button>
                     )}
                 </div>
+
+                <div className="h-72 w-full">
+                    {pieData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={pieData}
+                                    cx="50%"
+                                    cy="50%"
+                                    label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
+                                    labelLine={true}
+                                    outerRadius={90}
+                                    dataKey="value"
+                                    onClick={(data) => !pieCategory && setPieCategory(data.name)}
+                                >
+                                    {pieData.map((entry, index) => (
+                                        <Cell
+                                            key={`cell-${index}`}
+                                            fill={COLORS[index % COLORS.length]}
+                                            cursor="pointer"
+                                        />
+                                    ))}
+                                </Pie>
+                                <Tooltip formatter={(value) => formatCurrency(value)} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+                            No data available
+                        </div>
+                    )}
+                </div>
+                {!pieCategory && pieData.length > 0 && (
+                    <p className="text-center text-xs text-gray-400 mt-2">Click on a slice to view details</p>
+                )}
+            </div>
+
+            {/* 2. Percentage List Section */}
+            <div className="bg-white rounded-xl shadow-sm p-4">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-semibold text-gray-700">
+                        {listCategory ? `${listCategory} Details` : 'Category Breakdown'}
+                    </h3>
+                    {listCategory && (
+                        <button
+                            onClick={() => setListCategory(null)}
+                            className="text-xs bg-gray-100 px-2 py-1 rounded hover:bg-gray-200 text-gray-600"
+                        >
+                            ← Back
+                        </button>
+                    )}
+                </div>
+
+                <div className="space-y-4">
+                    {listData.length > 0 ? listData.map((item, index) => {
+                        // Use Severity Color for the progress bar
+                        const severityColor = getSeverityColor(index, listData.length);
+                        return (
+                            <div
+                                key={item.name}
+                                onClick={() => !listCategory && setListCategory(item.name)}
+                                className={`cursor-pointer ${!listCategory ? 'hover:bg-gray-50' : ''} rounded-lg p-2 transition-colors`}
+                            >
+                                <div className="flex justify-between items-center mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-gray-700">{item.name}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-sm font-bold text-gray-800 block">{formatCurrency(item.value)}</span>
+                                        <span className="text-xs text-gray-500">{item.percent.toFixed(1)}%</span>
+                                    </div>
+                                </div>
+                                {/* Progress Line uses Severity Color (Red -> Green) */}
+                                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full transition-all duration-500"
+                                        style={{
+                                            width: `${item.percent}%`,
+                                            backgroundColor: severityColor
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        );
+                    }) : (
+                        <div className="text-center text-gray-400 text-sm py-4">
+                            No data available
+                        </div>
+                    )}
+                </div>
+                {!listCategory && listData.length > 0 && (
+                    <p className="text-center text-xs text-gray-400 mt-4">Click on a category to view sub-categories</p>
+                )}
             </div>
         </div>
     );

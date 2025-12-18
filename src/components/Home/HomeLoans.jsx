@@ -4,7 +4,11 @@ import { formatCurrency } from '../../utils';
 import { Plus, Trash2, Save, ArrowLeft, Edit2, X, ChevronRight, History, Wallet } from 'lucide-react';
 
 const HomeLoans = ({ onNavigateBack }) => {
-    const { homeLoans, addHomeLoan, updateHomeLoan, deleteHomeLoan, homeLoanTransactions, addHomeLoanTransaction, deleteHomeLoanTransaction } = useData();
+    const {
+        homeLoans, addHomeLoan, updateHomeLoan, deleteHomeLoan,
+        homeLoanTransactions, addHomeLoanTransaction, deleteHomeLoanTransaction,
+        refreshData
+    } = useData();
 
     const [view, setView] = useState('list'); // 'list', 'add', 'detail'
     const [selectedLoan, setSelectedLoan] = useState(null);
@@ -181,6 +185,7 @@ const HomeLoans = ({ onNavigateBack }) => {
         };
 
         await addHomeLoanTransaction(txData);
+        await refreshData(true); // Force refresh to ensure sync (silent mode to prevent navigation reset)
 
         // Reduce Balance by PRINCIPAL Repay Amount ONLY
         const newBalance = Number(selectedLoan.current_balance) - principalPart;
@@ -444,7 +449,7 @@ const HomeLoans = ({ onNavigateBack }) => {
                                 <p className="text-2xl font-bold mt-1 text-yellow-400">
                                     {(() => {
                                         const interestPaid = homeLoanTransactions
-                                            .filter(t => t.loan_id == selectedLoan.id && (t.type === 'payment' || t.type === 'emi_payment'))
+                                            .filter(t => String(t.loan_id) === String(selectedLoan.id) && (t.type === 'payment' || t.type === 'emi_payment'))
                                             .reduce((sum, t) => sum + Number(t.interest_component || 0), 0);
                                         return formatCurrency(interestPaid);
                                     })()}
@@ -477,7 +482,7 @@ const HomeLoans = ({ onNavigateBack }) => {
                                         <p className="text-gray-400 text-xs">Tenure (Paid/Total)</p>
                                         <p className="font-medium">
                                             {(() => {
-                                                const paidMonths = homeLoanTransactions.filter(t => t.loan_id == selectedLoan.id && (t.type === 'payment' || t.type === 'emi_payment')).length;
+                                                const paidMonths = homeLoanTransactions.filter(t => String(t.loan_id) === String(selectedLoan.id) && (t.type === 'payment' || t.type === 'emi_payment')).length;
                                                 return `${paidMonths} Paid / ${selectedLoan.tenure_months || '-'} Total`;
                                             })()}
                                         </p>
@@ -571,7 +576,7 @@ const HomeLoans = ({ onNavigateBack }) => {
                         </div>
                         <div className="divide-y">
                             {homeLoanTransactions
-                                .filter(t => t.loan_id == selectedLoan.id)
+                                .filter(t => String(t.loan_id) === String(selectedLoan.id))
                                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                                 .map(tx => (
                                     <div key={tx.id} className="p-3 flex justify-between items-center">
@@ -594,7 +599,7 @@ const HomeLoans = ({ onNavigateBack }) => {
                                     </div>
                                 ))
                             }
-                            {homeLoanTransactions.filter(t => t.loan_id == selectedLoan.id).length === 0 && (
+                            {homeLoanTransactions.filter(t => String(t.loan_id) === String(selectedLoan.id)).length === 0 && (
                                 <p className="p-4 text-center text-gray-500 text-sm">No transactions yet.</p>
                             )}
                         </div>

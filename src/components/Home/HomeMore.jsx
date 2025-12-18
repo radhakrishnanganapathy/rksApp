@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, LayoutDashboard, Wallet } from 'lucide-react';
+import { TrendingUp, TrendingDown, LayoutDashboard, Wallet, Calculator } from 'lucide-react';
 
 const HomeMore = ({ onNavigate }) => {
     const menuItems = [
@@ -9,6 +9,7 @@ const HomeMore = ({ onNavigate }) => {
         { id: 'expense-master', label: 'Expense List', icon: LayoutDashboard, color: 'text-blue-600', bg: 'bg-blue-100' },
         { id: 'loans', label: 'Loans & EMI', icon: Wallet, color: 'text-orange-600', bg: 'bg-orange-100' },
         { id: 'savings', label: 'Savings', icon: TrendingUp, color: 'text-teal-600', bg: 'bg-teal-100' },
+        { id: 'emi-calculator', label: 'EMI Calculator', icon: Calculator, color: 'text-indigo-600', bg: 'bg-indigo-100' },
     ];
 
     return (
