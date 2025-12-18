@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Server } from 'lucide-react';
+import { Server, Download } from 'lucide-react';
 
 const DbUsageCard = () => {
     const [dbUsage, setDbUsage] = useState(null);
+    const [isDumping, setIsDumping] = useState(false);
     const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
 
     useEffect(() => {
@@ -11,6 +12,28 @@ const DbUsageCard = () => {
             .then(data => setDbUsage(data))
             .catch(err => console.error('Error fetching DB usage:', err));
     }, []);
+
+    const handleDumpDb = async () => {
+        if (window.confirm('Are you sure you want to dump the database? This will create a SQL file with all table schemas and data.')) {
+            setIsDumping(true);
+            try {
+                const response = await fetch(`${API_URL}/db-dump`, {
+                    method: 'POST',
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert(`Database dumped successfully!\nFile: ${data.filename}`);
+                } else {
+                    alert(`Failed to dump database: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error dumping database:', error);
+                alert('An error occurred while dumping the database.');
+            } finally {
+                setIsDumping(false);
+            }
+        }
+    };
 
     if (!dbUsage) return null;
 
@@ -37,7 +60,17 @@ const DbUsageCard = () => {
                         style={{ width: `${Math.min(dbUsage.percentage, 100)}%` }}
                     ></div>
                 </div>
-                <p className="text-xs text-right text-gray-500">{dbUsage.percentage}% Used</p>
+                <div className="flex justify-between items-center mt-2">
+                    <p className="text-xs text-gray-500">{dbUsage.percentage}% Used</p>
+                    <button
+                        onClick={handleDumpDb}
+                        disabled={isDumping}
+                        className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                    >
+                        <Download size={14} />
+                        {isDumping ? 'Dumping...' : 'Dump DB'}
+                    </button>
+                </div>
             </div>
         </div>
     );

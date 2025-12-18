@@ -2823,6 +2823,46 @@ initializeTables().then(() => {
         }
     });
 
+    // Database Dump Endpoint
+    app.post('/api/db-dump', async (req, res) => {
+        const { exec } = require('child_process');
+        const path = require('path');
+        const fs = require('fs');
+
+        try {
+            const date = new Date();
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const filename = `${year}${month}${day}.sql`;
+            // Save to 'backups' directory or root if simple
+            const backupDir = path.join(__dirname, 'backups');
+            if (!fs.existsSync(backupDir)) {
+                fs.mkdirSync(backupDir);
+            }
+            const filePath = path.join(backupDir, filename);
+
+            // Construct pg_dump command
+            // Note: PGPASSWORD is passed via env for security
+            const command = `pg_dump -h ${process.env.PGHOST} -p ${process.env.PGPORT} -U ${process.env.PGUSER} -d ${process.env.PGDATABASE} -F p -f "${filePath}"`;
+
+            exec(command, {
+                env: { ...process.env, PGPASSWORD: process.env.PGPASSWORD }
+            }, (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`exec error: ${error}`);
+                    return res.status(500).json({ error: 'Failed to create database dump', details: error.message });
+                }
+                console.log(`Database dumped to ${filePath}`);
+                res.json({ message: 'Database dumped successfully', filename: filename });
+            });
+
+        } catch (err) {
+            console.error('Error in db-dump:', err);
+            res.status(500).json({ error: 'Internal server error during dump' });
+        }
+    });
+
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
