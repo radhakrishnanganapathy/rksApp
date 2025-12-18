@@ -2854,7 +2854,16 @@ initializeTables().then(() => {
                     return res.status(500).json({ error: 'Failed to create database dump', details: error.message });
                 }
                 console.log(`Database dumped to ${filePath}`);
-                res.json({ message: 'Database dumped successfully', filename: filename });
+
+                // Send file to client
+                res.download(filePath, filename, (err) => {
+                    if (err) {
+                        console.error('Error sending file:', err);
+                        if (!res.headersSent) {
+                            res.status(500).json({ error: 'Failed to send file' });
+                        }
+                    }
+                });
             });
 
         } catch (err) {

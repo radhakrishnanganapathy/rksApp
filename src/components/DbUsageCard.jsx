@@ -14,17 +14,49 @@ const DbUsageCard = () => {
     }, []);
 
     const handleDumpDb = async () => {
-        if (window.confirm('Are you sure you want to dump the database? This will create a SQL file with all table schemas and data.')) {
+        if (window.confirm('Are you sure you want to dump the database? This will download a SQL file with all table schemas and data.')) {
             setIsDumping(true);
             try {
                 const response = await fetch(`${API_URL}/db-dump`, {
                     method: 'POST',
                 });
-                const data = await response.json();
+
                 if (response.ok) {
-                    alert(`Database dumped successfully!\nFile: ${data.filename}`);
+                    // Create a blob from the response
+                    const blob = await response.blob();
+                    // Create a link element
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+
+                    // Get filename from header or default
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = 'backup.sql';
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                        if (filenameMatch && filenameMatch.length === 2)
+                            filename = filenameMatch[1];
+                    } else {
+                        // Fallback filename generation
+                        const date = new Date();
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        filename = `${year}${month}${day}.sql`;
+                    }
+
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+
+                    // Cleanup
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    alert('Database dump started!');
                 } else {
-                    alert(`Failed to dump database: ${data.error}`);
+                    const data = await response.json();
+                    alert(`Failed to dump database: ${data.error || 'Unknown error'}`);
                 }
             } catch (error) {
                 console.error('Error dumping database:', error);
