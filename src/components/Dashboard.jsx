@@ -380,7 +380,7 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="space-y-6 pb-20">
+        <div className="space-y-6 pb-32">
             {/* Filters */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
                 <div className="flex gap-2 border-b pb-2">

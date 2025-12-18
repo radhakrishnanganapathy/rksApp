@@ -133,7 +133,7 @@ const HomeDashboard = () => {
     };
 
     return (
-        <div className="space-y-6 pb-20">
+        <div className="space-y-6 pb-32">
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                     <Wallet size={24} className="text-purple-600" />

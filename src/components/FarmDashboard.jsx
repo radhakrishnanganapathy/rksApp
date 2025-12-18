@@ -62,7 +62,7 @@ const FarmDashboard = () => {
     };
 
     return (
-        <div className="pb-4">
+        <div className="pb-32">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Farm Dashboard</h2>
 
             {/* Overall Summary Cards - 3 Metrics */}
