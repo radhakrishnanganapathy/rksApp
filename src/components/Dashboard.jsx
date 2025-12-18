@@ -9,6 +9,7 @@ import {
     Filter, TrendingUp, TrendingDown, DollarSign, Package,
     AlertCircle, Factory, Scale, IndianRupee, Users, Wallet, Activity
 } from 'lucide-react';
+import DbUsageCard from './DbUsageCard';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
@@ -623,6 +624,9 @@ const Dashboard = () => {
                     )}
                 </div>
             </div>
+
+            {/* DB Usage Card */}
+            <DbUsageCard />
         </div>
     );
 };

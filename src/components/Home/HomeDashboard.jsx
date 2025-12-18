@@ -4,6 +4,7 @@ import { formatCurrency } from '../../utils';
 import { Wallet, TrendingUp, TrendingDown, Calendar, ChevronDown } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import HomeAISuggestions from './HomeAISuggestions';
+import DbUsageCard from '../DbUsageCard';
 
 const HomeDashboard = () => {
     const { homeIncome, homeExpenses, homeLoans = [], sales = [], expenses = [], farmIncome = [], farmExpenses = [] } = useData();
@@ -445,6 +446,9 @@ const HomeDashboard = () => {
                     <p className="text-center text-xs text-gray-400 mt-4">Click on a category to view sub-categories</p>
                 )}
             </div>
+
+            {/* DB Usage Card */}
+            <DbUsageCard />
         </div>
     );
 };
