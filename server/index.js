@@ -201,9 +201,7 @@ const initializeTables = async () => {
             await db.query(`
                 ALTER TABLE employees 
                 ADD COLUMN IF NOT EXISTS mobile TEXT,
-                ADD COLUMN IF NOT EXISTS area TEXT,
-                ADD COLUMN IF NOT EXISTS daily_salary NUMERIC DEFAULT 0,
-                ADD COLUMN IF NOT EXISTS salary_type TEXT DEFAULT 'daily';
+                ADD COLUMN IF NOT EXISTS area TEXT;
             `);
             await db.query(`
                 ALTER TABLE attendance 
@@ -1305,18 +1303,29 @@ app.post('/api/attendance', async (req, res) => {
         const existing = await db.query('SELECT * FROM attendance WHERE employee_id = $1 AND date = $2', [employeeId, date]);
         console.log('[POST /api/attendance] Existing records:', existing.rows.length);
 
+        // Default custom salary logic:
+        // If status is 'present' and no customSalary provided, default to 250.
+        // If customSalary IS provided, use it.
+        // If status is NOT present, customSalary should be null unless explicitly provided? 
+        // User said: "if custom salary then it will add on that same col".
+
+        let finalCustomSalary = customSalary;
+        if (status === 'present' && (customSalary === undefined || customSalary === null)) {
+            finalCustomSalary = 250;
+        }
+
         let result;
         if (existing.rows.length > 0) {
             console.log('[POST /api/attendance] Updating existing attendance');
             result = await db.query(
                 'UPDATE attendance SET status = $1, custom_salary = $2 WHERE employee_id = $3 AND date = $4 RETURNING *',
-                [status, customSalary || null, employeeId, date]
+                [status, finalCustomSalary || null, employeeId, date]
             );
         } else {
             console.log('[POST /api/attendance] Inserting new attendance');
             result = await db.query(
                 'INSERT INTO attendance (id, date, employee_id, status, custom_salary) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-                [id, date, employeeId, status, customSalary || null]
+                [id, date, employeeId, status, finalCustomSalary || null]
             );
         }
         console.log('[POST /api/attendance] Success:', result.rows[0]);
