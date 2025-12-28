@@ -9,7 +9,9 @@ const migrateDatabase = async () => {
         await db.query(`
             ALTER TABLE employees 
             ADD COLUMN IF NOT EXISTS mobile TEXT,
-            ADD COLUMN IF NOT EXISTS area TEXT;
+            ADD COLUMN IF NOT EXISTS area TEXT,
+            ADD COLUMN IF NOT EXISTS daily_salary NUMERIC DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS salary_type TEXT DEFAULT 'daily';
         `);
         console.log('✓ Employees table updated');
 
