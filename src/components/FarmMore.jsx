@@ -1,7 +1,17 @@
-import React from 'react';
-import { Sprout, Settings, Clock, List, Scissors } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sprout, Settings, Clock, List, Scissors, Server } from 'lucide-react';
 
 const FarmMore = ({ onNavigate }) => {
+    const [dbUsage, setDbUsage] = useState(null);
+    const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
+
+    useEffect(() => {
+        fetch(`${API_URL}/db-usage`)
+            .then(res => res.json())
+            .then(data => setDbUsage(data))
+            .catch(err => console.error('Error fetching DB usage:', err));
+    }, []);
+
     const menuItems = [
         {
             id: 'cultivation',
@@ -64,6 +74,8 @@ const FarmMore = ({ onNavigate }) => {
                     );
                 })}
             </div>
+
+
         </div>
     );
 };

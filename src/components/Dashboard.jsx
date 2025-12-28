@@ -9,6 +9,7 @@ import {
     Filter, TrendingUp, TrendingDown, DollarSign, Package,
     AlertCircle, Factory, Scale, IndianRupee, Users, Wallet, Activity
 } from 'lucide-react';
+import DbUsageCard from './DbUsageCard';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
@@ -379,7 +380,7 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="space-y-6 pb-20">
+        <div className="space-y-6 pb-32">
             {/* Filters */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
                 <div className="flex gap-2 border-b pb-2">
@@ -623,6 +624,9 @@ const Dashboard = () => {
                     )}
                 </div>
             </div>
+
+            {/* DB Usage Card */}
+            <DbUsageCard />
         </div>
     );
 };

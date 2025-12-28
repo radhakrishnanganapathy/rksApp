@@ -103,8 +103,8 @@ export const DataProvider = ({ children }) => {
         pricePerUnit: Number(p.price_per_unit)
     });
 
-    const refreshData = async () => {
-        setLoading(true);
+    const refreshData = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             // Core HomeSnacks endpoints (required)
             const coreEndpoints = [
@@ -700,6 +700,7 @@ export const DataProvider = ({ children }) => {
             const newItem = await res.json();
             const mappedItem = mapper ? mapper(newItem) : newItem;
             stateSetter([mappedItem, ...currentState]); // Assuming new items are added to the beginning
+            return mappedItem;
         } catch (err) {
             console.error(`Error adding to ${endpoint}:`, err);
             throw err;
@@ -1164,7 +1165,10 @@ export const DataProvider = ({ children }) => {
     const deleteHomeLoan = (id) => deleteItem('home/loans', id, setHomeLoans, homeLoans);
 
     // Home Savings Functions
-    const addHomeSaving = (data) => addItem('home/savings', { ...data, id: Date.now() }, setHomeSavings, homeSavings);
+    const addHomeSaving = async (data) => {
+        const newItem = { ...data, id: Date.now() };
+        return await addItem('home/savings', newItem, setHomeSavings, homeSavings);
+    };
     const updateHomeSaving = (id, data) => updateItem('home/savings', id, data, setHomeSavings, homeSavings);
     const deleteHomeSaving = (id) => deleteItem('home/savings', id, setHomeSavings, homeSavings);
 
@@ -1206,27 +1210,41 @@ export const DataProvider = ({ children }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...data, id: Date.now() })
             });
-            const savedTx = await res.json();
-            setHomeLoanTransactions([savedTx, ...homeLoanTransactions]);
 
-            // Refetch loans to update current balance
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText);
+            }
+
+            const savedTx = await res.json();
+            // Optimistic update
+            setHomeLoanTransactions(prev => [savedTx, ...prev]);
+
+            // Refetch loans AND transactions to ensure consistency
             const loansRes = await fetch(`${API_URL}/home/loans`);
             const loansData = await loansRes.json();
             setHomeLoans(loansData.loans);
+            if (loansData.transactions) {
+                setHomeLoanTransactions(loansData.transactions);
+            }
         } catch (err) {
             console.error("Error adding loan transaction:", err);
+            alert(`Failed to add transaction: ${err.message}`);
         }
     };
 
     const deleteHomeLoanTransaction = async (id) => {
         try {
             await fetch(`${API_URL}/home/loan-transactions/${id}`, { method: 'DELETE' });
-            setHomeLoanTransactions(homeLoanTransactions.filter(t => t.id !== id));
+            setHomeLoanTransactions(prev => prev.filter(t => t.id !== id));
 
-            // Refetch loans to update current balance
+            // Refetch loans AND transactions to ensure consistency
             const loansRes = await fetch(`${API_URL}/home/loans`);
             const loansData = await loansRes.json();
             setHomeLoans(loansData.loans);
+            if (loansData.transactions) {
+                setHomeLoanTransactions(loansData.transactions);
+            }
         } catch (err) {
             console.error("Error deleting loan transaction:", err);
         }

@@ -622,16 +622,34 @@ const initializeTables = async () => {
             CREATE TABLE IF NOT EXISTS home_savings (
                 id BIGINT PRIMARY KEY,
                 name TEXT NOT NULL,
-                type TEXT NOT NULL, -- 'gold', 'fd', 'rd', 'own', 'stock', 'sip', 'mutual_fund', 'insurance', 'pf', 'outstanding'
+                type TEXT NOT NULL, -- 'gold_scheme', 'gold_purchase', 'fd', 'rd', ...
                 amount NUMERIC NOT NULL,
                 start_date DATE,
                 end_date DATE,
                 duration TEXT,
                 interest_rate NUMERIC,
                 description TEXT,
+                grams NUMERIC, -- For Gold Purchase
+                rate NUMERIC, -- For Gold Purchase
+                target_amount NUMERIC, -- For Gold Scheme
+                symbol TEXT, -- For Stocks/MF
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // Migration: Add new columns to home_savings
+        try {
+            await db.query(`
+                ALTER TABLE home_savings 
+                ADD COLUMN IF NOT EXISTS grams NUMERIC,
+                ADD COLUMN IF NOT EXISTS rate NUMERIC,
+                ADD COLUMN IF NOT EXISTS target_amount NUMERIC,
+                ADD COLUMN IF NOT EXISTS symbol TEXT;
+            `);
+            console.log('✅ Home savings columns checked/added.');
+        } catch (err) {
+            console.error('Error adding home savings columns:', err.message);
+        }
 
         // Home Savings Transactions Table
         await db.query(`
@@ -642,9 +660,27 @@ const initializeTables = async () => {
                 amount NUMERIC NOT NULL,
                 type TEXT NOT NULL, -- 'deposit', 'withdrawal', 'interest'
                 description TEXT,
+                grams NUMERIC, -- For Gold
+                rate NUMERIC, -- For Gold
+                employee_share NUMERIC, -- For PF
+                employer_share NUMERIC, -- For PF
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // Migration: Add grams and rate columns if they don't exist
+        try {
+            await db.query(`
+                ALTER TABLE home_savings_transactions
+                ADD COLUMN IF NOT EXISTS grams NUMERIC,
+                ADD COLUMN IF NOT EXISTS rate NUMERIC,
+                ADD COLUMN IF NOT EXISTS employee_share NUMERIC,
+                ADD COLUMN IF NOT EXISTS employer_share NUMERIC;
+            `);
+            console.log('✅ Home savings transactions columns checked/added.');
+        } catch (err) {
+            console.error('Error adding home savings transactions columns:', err.message);
+        }
 
         console.log('✅ Database tables checked/initialized');
     } catch (err) {
@@ -652,6 +688,37 @@ const initializeTables = async () => {
         process.exit(1);
     }
 };
+
+// Add Home Saving
+app.post('/api/home/savings', async (req, res) => {
+    const { name, type, amount, start_date, end_date, duration, interest_rate, description, grams, rate, target_amount, symbol } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO home_savings (id, name, type, amount, start_date, end_date, duration, interest_rate, description, grams, rate, target_amount, symbol) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *',
+            [Date.now(), name, type, amount, start_date, end_date, duration, interest_rate, description, grams || null, rate || null, target_amount || null, symbol || null]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Update Home Saving
+app.put('/api/home/savings/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, type, amount, start_date, end_date, duration, interest_rate, description, grams, rate, target_amount, symbol } = req.body;
+    try {
+        const result = await db.query(
+            `UPDATE home_savings SET name=$1, type=$2, amount=$3, start_date=$4, end_date=$5, duration=$6, interest_rate=$7, description=$8, grams=$9, rate=$10, target_amount=$11, symbol=$12 WHERE id=$13 RETURNING *`,
+            [name, type, amount, start_date, end_date, duration, interest_rate, description, grams || null, rate || null, target_amount || null, symbol || null, id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
 
 // --- Customers ---
 app.get('/api/customers', async (req, res) => {
@@ -2134,6 +2201,12 @@ app.delete('/api/home/loans/:id', async (req, res) => {
 app.post('/api/home/loan-transactions', async (req, res) => {
     const { id, loan_id, date, amount, type, description, interest_component } = req.body;
     try {
+        // Ensure interest_component column exists (Quick fix migration)
+        await db.query(`
+            ALTER TABLE home_loan_transactions 
+            ADD COLUMN IF NOT EXISTS interest_component NUMERIC(15, 2) DEFAULT 0;
+        `);
+
         const result = await db.query(
             'INSERT INTO home_loan_transactions (id, loan_id, date, amount, type, description, interest_component) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
             [id, loan_id, date, amount, type, description, interest_component || 0]
@@ -2228,27 +2301,27 @@ app.get('/api/home/savings-transactions', async (req, res) => {
 
 // Add Transaction (Deposit/Withdrawal)
 app.post('/api/home/savings-transactions', async (req, res) => {
-    const { id, saving_id, date, amount, type, description } = req.body;
+    const { id, saving_id, date, amount, type, description, grams, rate, employee_share, employer_share } = req.body;
     try {
         const newId = id || Date.now();
 
         // 1. Record Transaction
         const result = await db.query(
-            'INSERT INTO home_savings_transactions (id, saving_id, date, amount, type, description) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [newId, saving_id, date, amount, type, description]
+            'INSERT INTO home_savings_transactions (id, saving_id, date, amount, type, description, grams, rate, employee_share, employer_share) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
+            [newId, saving_id, date, amount, type, description, grams || null, rate || null, employee_share || null, employer_share || null]
         );
 
-        // 2. Update Saving Balance
-        // If deposit/interest, add to amount. If withdrawal, subtract.
-        let balanceChange = Number(amount);
-        if (type === 'withdrawal') {
-            balanceChange = -balanceChange;
+        // Update Saving Amount (Balance)
+        const saving = await db.query('SELECT amount FROM home_savings WHERE id = $1', [saving_id]);
+        let currentAmount = Number(saving.rows[0].amount);
+
+        if (type === 'deposit' || type === 'interest') {
+            currentAmount += Number(amount);
+        } else if (type === 'withdrawal') {
+            currentAmount -= Number(amount);
         }
 
-        await db.query(
-            'UPDATE home_savings SET amount = amount + $1 WHERE id = $2',
-            [balanceChange, saving_id]
-        );
+        await db.query('UPDATE home_savings SET amount = $1 WHERE id = $2', [currentAmount, saving_id]);
 
         res.json(result.rows[0]);
     } catch (err) {
@@ -2731,6 +2804,76 @@ initializeTables().then(() => {
             res.status(500).json({ error: err.message });
         }
     });
+    // Database Usage Endpoint
+    app.get('/api/db-usage', async (req, res) => {
+        try {
+            const result = await db.query('SELECT pg_database_size(current_database()) as size_bytes;');
+            const sizeBytes = Number(result.rows[0].size_bytes);
+            const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(2);
+            const limitMB = 100; // Render Free Tier Limit
+            const percentage = ((sizeMB / limitMB) * 100).toFixed(2);
+
+            res.json({
+                sizeBytes,
+                sizeMB,
+                limitMB,
+                percentage
+            });
+        } catch (err) {
+            console.error('Error fetching DB usage:', err);
+            res.status(500).json({ error: 'Failed to fetch DB usage' });
+        }
+    });
+
+    // Database Dump Endpoint
+    app.post('/api/db-dump', async (req, res) => {
+        const { exec } = require('child_process');
+        const path = require('path');
+        const fs = require('fs');
+
+        try {
+            const date = new Date();
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const filename = `${year}${month}${day}.sql`;
+            // Save to 'backups' directory or root if simple
+            const backupDir = path.join(__dirname, 'backups');
+            if (!fs.existsSync(backupDir)) {
+                fs.mkdirSync(backupDir);
+            }
+            const filePath = path.join(backupDir, filename);
+
+            // Construct pg_dump command
+            // Note: PGPASSWORD is passed via env for security
+            const command = `pg_dump -h ${process.env.PGHOST} -p ${process.env.PGPORT} -U ${process.env.PGUSER} -d ${process.env.PGDATABASE} -F p -f "${filePath}"`;
+
+            exec(command, {
+                env: { ...process.env, PGPASSWORD: process.env.PGPASSWORD }
+            }, (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`exec error: ${error}`);
+                    return res.status(500).json({ error: 'Failed to create database dump', details: error.message });
+                }
+                console.log(`Database dumped to ${filePath}`);
+
+                // Send file to client
+                res.download(filePath, filename, (err) => {
+                    if (err) {
+                        console.error('Error sending file:', err);
+                        if (!res.headersSent) {
+                            res.status(500).json({ error: 'Failed to send file' });
+                        }
+                    }
+                });
+            });
+
+        } catch (err) {
+            console.error('Error in db-dump:', err);
+            res.status(500).json({ error: 'Internal server error during dump' });
+        }
+    });
+
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });

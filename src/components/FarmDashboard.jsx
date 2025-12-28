@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Calendar } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import DbUsageCard from './DbUsageCard';
 
 const FarmDashboard = () => {
     const { farmCrops, farmExpenses, farmIncome } = useData();
@@ -61,7 +62,7 @@ const FarmDashboard = () => {
     };
 
     return (
-        <div className="pb-4">
+        <div className="pb-32">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Farm Dashboard</h2>
 
             {/* Overall Summary Cards - 3 Metrics */}
@@ -186,8 +187,8 @@ const FarmDashboard = () => {
 
                                         {/* Profit */}
                                         <div className={`border rounded-lg p-3 ${profit >= 0
-                                                ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-300'
-                                                : 'bg-gradient-to-br from-red-50 to-red-100 border-red-300'
+                                            ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-300'
+                                            : 'bg-gradient-to-br from-red-50 to-red-100 border-red-300'
                                             }`}>
                                             <p className={`text-xs font-semibold mb-1 ${profit >= 0 ? 'text-green-700' : 'text-red-700'
                                                 }`}>
@@ -205,6 +206,9 @@ const FarmDashboard = () => {
                     </div>
                 )}
             </div>
+
+            {/* DB Usage Card */}
+            <DbUsageCard />
         </div>
     );
 };

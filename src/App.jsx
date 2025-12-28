@@ -41,6 +41,7 @@ import HomeMore from './components/Home/HomeMore';
 import HomeExpenseMaster from './components/Home/HomeExpenseMaster';
 import HomeLoans from './components/Home/HomeLoans';
 import HomeSavings from './components/Home/HomeSavings';
+import HomeEMICalculator from './components/Home/HomeEMICalculator';
 
 import { useData } from './context/DataContext';
 
@@ -97,6 +98,8 @@ function App() {
           return <HomeLoans onNavigateBack={() => setActiveTab('more')} />;
         case 'savings':
           return <HomeSavings onNavigateBack={() => setActiveTab('more')} />;
+        case 'emi-calculator':
+          return <HomeEMICalculator onNavigateBack={() => setActiveTab('more')} />;
         case 'more':
           return <HomeMore onNavigate={setActiveTab} />;
         default:
@@ -158,7 +161,7 @@ function App() {
       const homeSnacksTabs = ['production', 'expenses', 'employees', 'customers', 'stats',
         'analysis', 'lastbuy', 'compare', 'orders', 'balance',
         'raw-material-prices', 'data-management', 'products', 'previous-month-stock'];
-      const homeTabs = ['income', 'expenses', 'expense-master', 'loans'];
+      const homeTabs = ['income', 'expenses', 'expense-master', 'loans', 'emi-calculator'];
 
       if (businessMode === 'farm' && farmTabs.includes(activeTab)) {
         setActiveTab('more');
