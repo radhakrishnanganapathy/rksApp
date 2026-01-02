@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { filterByMonthYear, formatCurrency } from '../utils';
+import { filterByMonthYear, formatCurrency, getYearRange } from '../utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { GitCompare, ArrowLeft } from 'lucide-react';
 
@@ -241,9 +241,9 @@ const Compare = ({ onNavigateBack }) => {
                                     onChange={(e) => setYear1(e.target.value)}
                                     className="flex-1 border rounded p-2"
                                 >
-                                    <option value="2023">2023</option>
-                                    <option value="2024">2024</option>
-                                    <option value="2025">2025</option>
+                                    {getYearRange().map(year => (
+                                        <option key={year} value={year}>{year}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
@@ -267,9 +267,9 @@ const Compare = ({ onNavigateBack }) => {
                                     onChange={(e) => setYear2(e.target.value)}
                                     className="flex-1 border rounded p-2"
                                 >
-                                    <option value="2023">2023</option>
-                                    <option value="2024">2024</option>
-                                    <option value="2025">2025</option>
+                                    {getYearRange().map(year => (
+                                        <option key={year} value={year}>{year}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>

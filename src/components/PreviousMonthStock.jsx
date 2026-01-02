@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X } from 'lucide-react';
+import { getYearRange } from '../utils';
 
 const PreviousMonthStock = ({ onNavigateBack }) => {
     const { products, rawMaterialPrices } = useData();
@@ -271,10 +272,9 @@ const PreviousMonthStock = ({ onNavigateBack }) => {
                                         onChange={(e) => setFormData({ ...formData, year: e.target.value })}
                                         className="w-full border rounded p-2"
                                     >
-                                        <option value="2023">2023</option>
-                                        <option value="2024">2024</option>
-                                        <option value="2025">2025</option>
-                                        <option value="2026">2026</option>
+                                        {getYearRange().map(year => (
+                                            <option key={year} value={year}>{year}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -340,6 +340,7 @@ const PreviousMonthStock = ({ onNavigateBack }) => {
                                     <option value="L">L</option>
                                     <option value="ml">ml</option>
                                     <option value="units">units</option>
+                                    <option value="count">count</option>
                                 </select>
                             </div>
 

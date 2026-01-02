@@ -96,7 +96,7 @@ const Billing = () => {
             name: currentItem,
             qty: Number(currentQty),
             price: Number(currentPrice),
-            total: Number(currentQty) * Number(currentPrice)
+            total: Math.round(Number(currentQty) * Number(currentPrice) * 100) / 100
         };
 
         if (editingItemIndex !== null) {
@@ -136,7 +136,8 @@ const Billing = () => {
 
     const calculateTotal = () => {
         const subtotal = billItems.reduce((sum, item) => sum + item.total, 0);
-        return subtotal - Number(discount);
+        const finalTotal = subtotal - Number(discount);
+        return Math.max(0, Math.round(finalTotal * 100) / 100); // Keep 2 decimal places for accuracy but allow precision
     };
 
     const handleSaveBill = () => {

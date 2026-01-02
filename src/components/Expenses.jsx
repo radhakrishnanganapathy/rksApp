@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Save, Wallet, Package, TrendingDown, List, Trash2, Edit, X, ArrowLeft } from 'lucide-react';
-import { formatCurrency, filterByMonthYear } from '../utils';
+import { formatCurrency, filterByMonthYear, getYearRange } from '../utils';
 
 
 
@@ -53,6 +53,7 @@ const Expenses = ({ onNavigateBack }) => {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [filterType, setFilterType] = useState('month'); // 'month' or 'date'
     const [filterCategory, setFilterCategory] = useState('All');
+    const [filterMaterialName, setFilterMaterialName] = useState('');
 
     // --- Helper Functions ---
     const getMaterialPrice = (materialName) => {
@@ -266,8 +267,14 @@ const Expenses = ({ onNavigateBack }) => {
         if (filterCategory !== 'All') {
             data = data.filter(e => e.category === filterCategory);
         }
+
+        if (filterMaterialName.trim() !== '') {
+            data = data.filter(e =>
+                e.materialName && e.materialName.toLowerCase().includes(filterMaterialName.toLowerCase())
+            );
+        }
         return data;
-    }, [expenses, selectedMonth, selectedYear, selectedDate, filterType, filterCategory]);
+    }, [expenses, selectedMonth, selectedYear, selectedDate, filterType, filterCategory, filterMaterialName]);
 
     const filteredUsage = useMemo(() => {
         if (filterType === 'date') {
@@ -698,9 +705,9 @@ const Expenses = ({ onNavigateBack }) => {
                                     ))}
                                 </select>
                                 <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-24 border rounded p-2 text-sm">
-                                    <option value="2023">2023</option>
-                                    <option value="2024">2024</option>
-                                    <option value="2025">2025</option>
+                                    {getYearRange().map(year => (
+                                        <option key={year} value={year}>{year}</option>
+                                    ))}
                                 </select>
                             </div>
                         ) : (
@@ -832,118 +839,146 @@ const Expenses = ({ onNavigateBack }) => {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* --- Tab 4: Expenses List --- */}
-            {activeTab === 'list' && (
-                <div className="space-y-4">
-                    {/* Filters */}
-                    <div className="bg-white p-4 rounded-lg shadow-sm space-y-3">
-                        <div className="flex gap-2 border-b pb-2 mb-2">
-                            <button
-                                className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'month' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
-                                onClick={() => setFilterType('month')}
-                            >
-                                Month View
-                            </button>
-                            <button
-                                className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'date' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
-                                onClick={() => setFilterType('date')}
-                            >
-                                Date View
-                            </button>
-                        </div>
-
-                        {filterType === 'month' ? (
-                            <div className="flex gap-2">
-                                <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="flex-1 border rounded p-2 text-sm">
-                                    {Array.from({ length: 12 }, (_, i) => (
-                                        <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
-                                    ))}
-                                </select>
-                                <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-24 border rounded p-2 text-sm">
-                                    <option value="2023">2023</option>
-                                    <option value="2024">2024</option>
-                                    <option value="2025">2025</option>
-                                </select>
+            {
+                activeTab === 'list' && (
+                    <div className="space-y-4">
+                        {/* Filters */}
+                        <div className="bg-white p-4 rounded-lg shadow-sm space-y-3">
+                            <div className="flex gap-2 border-b pb-2 mb-2">
+                                <button
+                                    className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'month' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                    onClick={() => setFilterType('month')}
+                                >
+                                    Month View
+                                </button>
+                                <button
+                                    className={`flex-1 py-1 text-sm font-medium rounded ${filterType === 'date' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                    onClick={() => setFilterType('date')}
+                                >
+                                    Date View
+                                </button>
                             </div>
-                        ) : (
-                            <div>
-                                <input
-                                    type="date"
-                                    value={selectedDate}
-                                    onChange={(e) => setSelectedDate(e.target.value)}
-                                    className="w-full border rounded p-2 text-sm"
-                                />
-                            </div>
-                        )}
-                        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full border rounded p-2 text-sm">
-                            <option value="All">All Categories</option>
-                            <option value="Raw Material">Raw Material</option>
-                            <option value="Maintenance">Maintenance</option>
-                            <option value="Equipment">Equipment</option>
-                            <option value="Salary">Salary</option>
-                            <option value="Rent">Rent</option>
-                            <option value="Transport">Transport</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
 
-                    {/* Total Summary */}
-                    <div className="bg-red-50 p-4 rounded-lg border border-red-100 flex justify-between items-center">
-                        <div>
-                            <div className="text-xs text-red-600 font-bold uppercase">Total Expenses</div>
-                            <div className="text-2xl font-bold text-gray-800">{formatCurrency(totalExpensesAmount)}</div>
-                        </div>
-                        <div className="text-right text-xs text-gray-500">
-                            {filteredExpenses.length} records
-                        </div>
-                    </div>
-
-                    {/* List */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="divide-y">
-                            {filteredExpenses.length === 0 ? (
-                                <div className="p-8 text-center text-gray-500">No expenses found</div>
+                            {filterType === 'month' ? (
+                                <div className="flex gap-2">
+                                    <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="flex-1 border rounded p-2 text-sm">
+                                        {Array.from({ length: 12 }, (_, i) => (
+                                            <option key={i} value={i}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
+                                        ))}
+                                    </select>
+                                    <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-24 border rounded p-2 text-sm">
+                                        {getYearRange().map(year => (
+                                            <option key={year} value={year}>{year}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             ) : (
-                                filteredExpenses.map(expense => (
-                                    <div key={expense.id} className="p-4 hover:bg-gray-50 transition-colors">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className={`px-2 py-0.5 text-xs rounded font-medium ${expense.category === 'Raw Material' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'
-                                                        }`}>
-                                                        {expense.category}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500">{expense.date}</span>
-                                                </div>
-                                                <div className="font-medium text-gray-800">
-                                                    {expense.category === 'Raw Material' ? (
-                                                        <span>{expense.materialName} <span className="text-gray-500 text-xs">({expense.quantity} {expense.unit})</span></span>
-                                                    ) : (
-                                                        expense.notes || 'No description'
+                                <div>
+                                    <input
+                                        type="date"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        className="w-full border rounded p-2 text-sm"
+                                    />
+                                </div>
+                            )}
+                            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full border rounded p-2 text-sm">
+                                <option value="All">All Categories</option>
+                                <option value="Raw Material">Raw Material</option>
+                                <option value="Maintenance">Maintenance</option>
+                                <option value="Equipment">Equipment</option>
+                                <option value="Salary">Salary</option>
+                                <option value="Rent">Rent</option>
+                                <option value="Transport">Transport</option>
+                                <option value="Other">Other</option>
+                            </select>
+
+                            {filterCategory === 'Raw Material' && (
+                                <div className="relative">
+                                    <select
+                                        value={filterMaterialName}
+                                        onChange={(e) => setFilterMaterialName(e.target.value)}
+                                        className="w-full border rounded p-2 pl-8 text-sm appearance-none bg-white"
+                                    >
+                                        <option value="">All Materials</option>
+                                        {/* Get unique material names from existing stocks or expenses */}
+                                        {[...new Set(stocks.rawMaterials.map(item => item.name))].sort().map(name => (
+                                            <option key={name} value={name}>{name}</option>
+                                        ))}
+                                    </select>
+                                    <Package size={16} className="absolute left-2.5 top-2.5 text-gray-400 pointer-events-none" />
+                                    {filterMaterialName && (
+                                        <button
+                                            onClick={() => setFilterMaterialName('')}
+                                            className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Total Summary */}
+                        <div className="bg-red-50 p-4 rounded-lg border border-red-100 flex justify-between items-center">
+                            <div>
+                                <div className="text-xs text-red-600 font-bold uppercase">Total Expenses</div>
+                                <div className="text-2xl font-bold text-gray-800">{formatCurrency(totalExpensesAmount)}</div>
+                            </div>
+                            <div className="text-right text-xs text-gray-500">
+                                {filteredExpenses.length} records
+                            </div>
+                        </div>
+
+                        {/* List */}
+                        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                            <div className="divide-y">
+                                {filteredExpenses.length === 0 ? (
+                                    <div className="p-8 text-center text-gray-500">No expenses found</div>
+                                ) : (
+                                    filteredExpenses.map(expense => (
+                                        <div key={expense.id} className="p-4 hover:bg-gray-50 transition-colors">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className={`px-2 py-0.5 text-xs rounded font-medium ${expense.category === 'Raw Material' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'
+                                                            }`}>
+                                                            {expense.category}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500">{expense.date}</span>
+                                                    </div>
+                                                    <div className="font-medium text-gray-800">
+                                                        {expense.category === 'Raw Material' ? (
+                                                            <span>{expense.materialName} <span className="text-gray-500 text-xs">({expense.quantity} {expense.unit})</span></span>
+                                                        ) : (
+                                                            expense.notes || 'No description'
+                                                        )}
+                                                    </div>
+                                                    {expense.category === 'Raw Material' && expense.notes && (
+                                                        <div className="text-xs text-gray-400 mt-1">{expense.notes}</div>
                                                     )}
                                                 </div>
-                                                {expense.category === 'Raw Material' && expense.notes && (
-                                                    <div className="text-xs text-gray-400 mt-1">{expense.notes}</div>
-                                                )}
-                                            </div>
-                                            <div className="text-right flex flex-col items-end gap-2">
-                                                <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => handleEditExpense(expense)} className="text-blue-600 p-1 bg-blue-50 rounded"><Edit size={14} /></button>
-                                                    <button onClick={() => handleDeleteExpense(expense.id)} className="text-red-600 p-1 bg-red-50 rounded"><Trash2 size={14} /></button>
+                                                <div className="text-right flex flex-col items-end gap-2">
+                                                    <span className="font-bold text-red-600">{formatCurrency(expense.amount)}</span>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => handleEditExpense(expense)} className="text-blue-600 p-1 bg-blue-50 rounded"><Edit size={14} /></button>
+                                                        <button onClick={() => handleDeleteExpense(expense.id)} className="text-red-600 p-1 bg-red-50 rounded"><Trash2 size={14} /></button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))
-                            )}
+                                    ))
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

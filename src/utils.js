@@ -21,6 +21,15 @@ export const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',
         currency: 'INR',
-        maximumFractionDigits: 0
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 2
     }).format(amount);
+};
+export const getYearRange = (startYear = 2023) => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = startYear; y <= currentYear + 1; y++) {
+        years.push(y);
+    }
+    return years.sort((a, b) => b - a); // Return years in descending order (latest first)
 };

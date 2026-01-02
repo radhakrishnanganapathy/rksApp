@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Save, Package, Trash2, Edit2, ArrowLeft, X } from 'lucide-react';
-import { filterByMonthYear } from '../utils';
+import { filterByMonthYear, getYearRange } from '../utils';
 
 const Production = ({ onNavigateBack }) => {
     const { production, addProduction, updateProduction, deleteProduction, stocks, products } = useData();
@@ -206,9 +206,9 @@ const Production = ({ onNavigateBack }) => {
                             ))}
                         </select>
                         <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="border rounded p-1 text-sm flex-1 min-w-[80px]">
-                            <option value="2023">2023</option>
-                            <option value="2024">2024</option>
-                            <option value="2025">2025</option>
+                            {getYearRange().map(year => (
+                                <option key={year} value={year}>{year}</option>
+                            ))}
                         </select>
                         <select value={selectedItemFilter} onChange={(e) => setSelectedItemFilter(e.target.value)} className="border rounded p-1 text-sm flex-1 min-w-[120px]">
                             <option value="">All Items</option>

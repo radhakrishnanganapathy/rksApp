@@ -684,7 +684,7 @@ export const DataProvider = ({ children }) => {
             });
             const updatedItem = await res.json();
             const mappedItem = mapper ? mapper(updatedItem) : updatedItem;
-            stateSetter(currentState.map(item => item.id === id ? mappedItem : item));
+            stateSetter(currentState.map(item => String(item.id) === String(id) ? mappedItem : item));
         } catch (err) {
             console.error(`Error updating ${endpoint}:`, err);
         }

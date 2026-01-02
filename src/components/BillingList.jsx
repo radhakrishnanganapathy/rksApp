@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { formatCurrency, filterByMonthYear } from '../utils';
+import { formatCurrency, filterByMonthYear, getYearRange } from '../utils';
 import { Trash2, Edit, ChevronDown, ChevronUp, Search, Filter } from 'lucide-react';
 
 const BillingList = ({ onEdit }) => {
@@ -130,9 +130,9 @@ const BillingList = ({ onEdit }) => {
                             onChange={(e) => setSelectedYear(e.target.value)}
                             className="border rounded p-2 text-sm flex-1"
                         >
-                            <option value="2023">2023</option>
-                            <option value="2024">2024</option>
-                            <option value="2025">2025</option>
+                            {getYearRange().map(year => (
+                                <option key={year} value={year}>{year}</option>
+                            ))}
                         </select>
                     </div>
                 ) : (

@@ -23,10 +23,19 @@ const initializeTables = async () => {
             CREATE TABLE IF NOT EXISTS customers (
                 id BIGINT PRIMARY KEY,
                 name TEXT NOT NULL,
+                shop_name TEXT,
                 mobile TEXT,
                 place TEXT
             );
         `);
+
+        // Migration: Add shop_name to customers
+        try {
+            await db.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS shop_name TEXT;`);
+            console.log('✅ Customer shop_name column checked/added.');
+        } catch (e) {
+            console.log('shop_name migration note:', e.message);
+        }
 
         // Sales Table
         await db.query(`
@@ -718,28 +727,7 @@ app.put('/api/home/savings/:id', async (req, res) => {
     }
 });
 
-// --- Customers ---
-app.get('/api/customers', async (req, res) => {
-    try {
-        const result = await db.query('SELECT * FROM customers ORDER BY name');
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
 
-app.post('/api/customers', async (req, res) => {
-    const { id, name, mobile, place } = req.body;
-    try {
-        const result = await db.query(
-            'INSERT INTO customers (id, name, mobile, place) VALUES ($1, $2, $3, $4) RETURNING *',
-            [id, name, mobile, place]
-        );
-        res.json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
 
 // --- Sales ---
 app.get('/api/sales', async (req, res) => {
@@ -1659,20 +1647,34 @@ app.delete('/api/raw-material-usage/:id', async (req, res) => {
 app.get('/api/customers', async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM customers ORDER BY name');
-        res.json(result.rows);
+        const mapped = result.rows.map(c => ({
+            id: c.id,
+            name: c.name,
+            shopName: c.shop_name,
+            phone: c.mobile,
+            area: c.place
+        }));
+        res.json(mapped);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 app.post('/api/customers', async (req, res) => {
-    const { id, name, mobile, place } = req.body;
+    const { id, name, shopName, phone, area } = req.body;
     try {
         const result = await db.query(
-            'INSERT INTO customers (id, name, mobile, place) VALUES ($1, $2, $3, $4) RETURNING *',
-            [id, name, mobile, place]
+            'INSERT INTO customers (id, name, shop_name, mobile, place) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [id || Date.now(), name, shopName, phone, area]
         );
-        res.json(result.rows[0]);
+        const c = result.rows[0];
+        res.json({
+            id: c.id,
+            name: c.name,
+            shopName: c.shop_name,
+            phone: c.mobile,
+            area: c.place
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -1680,7 +1682,7 @@ app.post('/api/customers', async (req, res) => {
 
 app.put('/api/customers/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, mobile, place } = req.body;
+    const { name, shopName, phone, area } = req.body;
     try {
         let query = 'UPDATE customers SET ';
         const params = [];
@@ -1691,23 +1693,43 @@ app.put('/api/customers/:id', async (req, res) => {
             params.push(name);
             paramCount++;
         }
-        if (mobile !== undefined) {
-            query += `mobile = $${paramCount}, `;
-            params.push(mobile);
+        if (shopName !== undefined) {
+            query += `shop_name = $${paramCount}, `;
+            params.push(shopName);
             paramCount++;
         }
-        if (place !== undefined) {
+        if (phone !== undefined) {
+            query += `mobile = $${paramCount}, `;
+            params.push(phone);
+            paramCount++;
+        }
+        if (area !== undefined) {
             query += `place = $${paramCount}, `;
-            params.push(place);
+            params.push(area);
             paramCount++;
         }
 
-        query = query.slice(0, -2);
+        if (params.length === 0) {
+            return res.status(400).json({ error: 'No fields to update' });
+        }
+
+        query = query.slice(0, -2); // Remove last comma
         query += ` WHERE id = $${paramCount} RETURNING *`;
         params.push(id);
 
         const result = await db.query(query, params);
-        res.json(result.rows[0]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Customer not found' });
+        }
+
+        const c = result.rows[0];
+        res.json({
+            id: c.id,
+            name: c.name,
+            shopName: c.shop_name,
+            phone: c.mobile,
+            area: c.place
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

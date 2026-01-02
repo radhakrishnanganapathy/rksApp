@@ -24,12 +24,14 @@ const HomeIncome = ({ onNavigateBack }) => {
 
     const sortedCategories = Object.keys(groupedItems).sort();
 
-    const handleItemSelect = (e) => {
-        const value = e.target.value;
-        if (!value) return;
-
-        const [selectedCat, selectedName] = value.split(':::');
+    const handleCategorySelect = (e) => {
+        const selectedCat = e.target.value;
         setCategory(selectedCat);
+        if (!editingId) setDescription('');
+    };
+
+    const handleSubCategorySelect = (e) => {
+        const selectedName = e.target.value;
         setDescription(selectedName);
     };
 
@@ -123,24 +125,39 @@ const HomeIncome = ({ onNavigateBack }) => {
                         />
 
                         {/* Income Item Selection */}
-                        <div>
-                            <label className="block text-xs text-gray-500 mb-1">Select Income Item</label>
-                            <select
-                                onChange={handleItemSelect}
-                                className="w-full border rounded p-2 bg-gray-50"
-                                defaultValue=""
-                            >
-                                <option value="">-- Select Item --</option>
-                                {sortedCategories.map(cat => (
-                                    <optgroup key={cat} label={cat}>
-                                        {groupedItems[cat].map(item => (
-                                            <option key={item.id} value={`${item.category}:::${item.name}`}>
-                                                {item.name}
-                                            </option>
-                                        ))}
-                                    </optgroup>
-                                ))}
-                            </select>
+                        {/* Category & Sub-category Selection */}
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="block text-xs text-gray-500 mb-1">Select Category</label>
+                                <select
+                                    value={category}
+                                    onChange={handleCategorySelect}
+                                    className="w-full border rounded p-2 bg-gray-50 text-sm"
+                                >
+                                    <option value="">-- Select Category --</option>
+                                    {sortedCategories.map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                    <option value="Others-Manual">Add New Category</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs text-gray-500 mb-1">Select Item</label>
+                                <select
+                                    value={description}
+                                    onChange={handleSubCategorySelect}
+                                    className={`w-full border rounded p-2 bg-gray-50 text-sm ${!category ? 'opacity-50' : ''}`}
+                                    disabled={!category || category === 'Others-Manual'}
+                                >
+                                    <option value="">-- Select Item --</option>
+                                    {category && groupedItems[category] && groupedItems[category].map(item => (
+                                        <option key={item.id} value={item.name}>
+                                            {item.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">

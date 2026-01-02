@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
-import { filterByMonthYear, formatCurrency } from '../utils';
+import { filterByMonthYear, formatCurrency, getYearRange } from '../utils';
 import { Filter, TrendingUp, ArrowLeft } from 'lucide-react';
 
 const Analysis = ({ onNavigateBack }) => {
@@ -166,9 +166,9 @@ const Analysis = ({ onNavigateBack }) => {
                                 onChange={(e) => setSelectedYear(e.target.value)}
                                 className="w-full border rounded p-2"
                             >
-                                <option value="2023">2023</option>
-                                <option value="2024">2024</option>
-                                <option value="2025">2025</option>
+                                {getYearRange().map(year => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
                             </select>
                         </div>
                     </div>
