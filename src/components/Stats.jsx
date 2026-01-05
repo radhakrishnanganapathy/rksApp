@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { formatCurrency, getYearRange } from '../utils';
-import { TrendingUp, TrendingDown, DollarSign, Package, Users, ShoppingCart, ArrowLeft } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Package, Users, ShoppingCart, ArrowLeft, Activity } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Stats = ({ onNavigateBack }) => {
     const { sales, production, expenses, attendance, employees, customers, stocks, rawMaterialPrices, previousMonthItemStock, previousMonthRawMaterialStock, rawMaterialUsage, products } = useData();
@@ -14,6 +15,7 @@ const Stats = ({ onNavigateBack }) => {
     const [selectedMaterials, setSelectedMaterials] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState(''); // For product sales stats filter
     const [selectedProductCustomer, setSelectedProductCustomer] = useState(''); // For product sales stats customer filter
+    const [comparisonMetric, setComparisonMetric] = useState('rs'); // 'rs' or 'kg'
 
     // Filter data based on month/year
     const filteredData = useMemo(() => {
@@ -280,6 +282,52 @@ const Stats = ({ onNavigateBack }) => {
         return { records: sortedRecords, totalQuantity };
     }, [filteredData.sales, customers, selectedProduct, selectedProductCustomer]);
 
+    // Monthly Comparison Data
+    const comparisonData = useMemo(() => {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        const prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
+        const prevMonth = prevMonthDate.getMonth();
+        const prevYear = prevMonthDate.getFullYear();
+
+        const getDailyData = (month, year) => {
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daily = Array.from({ length: daysInMonth }, (_, i) => ({
+                day: i + 1,
+                value: 0
+            }));
+
+            sales.forEach(sale => {
+                const saleDate = new Date(sale.date);
+                if (saleDate.getMonth() === month && saleDate.getFullYear() === year) {
+                    const day = saleDate.getDate();
+                    const value = comparisonMetric === 'kg'
+                        ? sale.items.reduce((sum, item) => sum + Number(item.qty), 0)
+                        : Number(sale.total);
+
+                    if (daily[day - 1]) {
+                        daily[day - 1].value += value;
+                    }
+                }
+            });
+            return daily;
+        };
+
+        const currentMonthDaily = getDailyData(currentMonth, currentYear);
+        const prevMonthDaily = getDailyData(prevMonth, prevYear);
+
+        const maxDays = Math.max(currentMonthDaily.length, prevMonthDaily.length);
+        return Array.from({ length: maxDays }, (_, i) => ({
+            day: i + 1,
+            current: currentMonthDaily[i]?.value || 0,
+            previous: prevMonthDaily[i]?.value || 0,
+            currentMonthName: now.toLocaleString('default', { month: 'short' }),
+            prevMonthName: prevMonthDate.toLocaleString('default', { month: 'short' })
+        }));
+    }, [sales, comparisonMetric]);
+
     return (
         <div className="space-y-6 pb-20">
             <div className="flex items-center gap-2">
@@ -303,6 +351,7 @@ const Stats = ({ onNavigateBack }) => {
                     <option value="item-production-stock">Item: Production, Sales & Stock</option>
                     <option value="raw-material-analysis">Raw Material Analysis</option>
                     <option value="product-sales-stats">Product Sales Stats</option>
+                    <option value="monthly-comparison">Monthly Sales Comparison</option>
                 </select>
             </div>
 
@@ -704,6 +753,70 @@ const Stats = ({ onNavigateBack }) => {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+            {viewType === 'monthly-comparison' && (
+                <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <div className="p-3 bg-cyan-50 border-b border-cyan-100 flex justify-between items-center">
+                        <h3 className="font-semibold text-gray-700">Monthly Sales Comparison</h3>
+                        <div className="flex bg-white border rounded overflow-hidden">
+                            <button
+                                onClick={() => setComparisonMetric('rs')}
+                                className={`px-3 py-1 text-xs font-medium ${comparisonMetric === 'rs' ? 'bg-cyan-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                Rs (₹)
+                            </button>
+                            <button
+                                onClick={() => setComparisonMetric('kg')}
+                                className={`px-3 py-1 text-xs font-medium border-l ${comparisonMetric === 'kg' ? 'bg-cyan-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                Kg
+                            </button>
+                        </div>
+                    </div>
+                    <div className="p-4" style={{ height: '400px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart
+                                data={comparisonData}
+                                margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                <XAxis
+                                    dataKey="day"
+                                    label={{ value: 'Day of Month', position: 'bottom', offset: 0, fontSize: 12 }}
+                                    tick={{ fontSize: 11 }}
+                                />
+                                <YAxis
+                                    tick={{ fontSize: 11 }}
+                                    tickFormatter={(value) => comparisonMetric === 'rs' ? `₹${value / 1000}k` : `${value}`}
+                                />
+                                <Tooltip
+                                    formatter={(value) => comparisonMetric === 'rs' ? formatCurrency(value) : `${value.toFixed(2)} kg`}
+                                    labelFormatter={(label) => `Day ${label}`}
+                                />
+                                <Legend verticalAlign="top" height={36} />
+                                <Line
+                                    name={`Current Month (${comparisonData[0]?.currentMonthName || ''})`}
+                                    type="monotone"
+                                    dataKey="current"
+                                    stroke="#10b981"
+                                    strokeWidth={3}
+                                    dot={false}
+                                    activeDot={{ r: 6 }}
+                                />
+                                <Line
+                                    name={`Prev Month (${comparisonData[0]?.prevMonthName || ''})`}
+                                    type="monotone"
+                                    dataKey="previous"
+                                    stroke="#ef4444"
+                                    strokeWidth={3}
+                                    dot={false}
+                                    activeDot={{ r: 6 }}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
             )}

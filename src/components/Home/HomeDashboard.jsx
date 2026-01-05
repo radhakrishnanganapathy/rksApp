@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { formatCurrency } from '../../utils';
-import { Wallet, TrendingUp, TrendingDown, Calendar, ChevronDown } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Calendar, ChevronDown, Timer } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import HomeAISuggestions from './HomeAISuggestions';
 import DbUsageCard from '../DbUsageCard';
 
 const HomeDashboard = () => {
-    const { homeIncome, homeExpenses, homeLoans = [], sales = [], expenses = [], farmIncome = [], farmExpenses = [] } = useData();
+    const { homeIncome, homeExpenses, homeLoans = [], sales = [], expenses = [], farmIncome = [], farmExpenses = [], countdowns = [] } = useData();
 
     // Filter State
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -140,6 +140,7 @@ const HomeDashboard = () => {
                     Home Finance
                 </h2>
             </div>
+
 
             {/* Overall Monthly Summary (Box Style) */}
             <div className="space-y-4">

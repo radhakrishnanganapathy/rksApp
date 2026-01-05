@@ -6,7 +6,7 @@ const DataContext = createContext();
 export const useData = () => useContext(DataContext);
 
 export const DataProvider = ({ children }) => {
-    const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
+    const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
     const [sales, setSales] = useState([]);
     const [production, setProduction] = useState([]);
@@ -43,6 +43,32 @@ export const DataProvider = ({ children }) => {
     const [homeLoanTransactions, setHomeLoanTransactions] = useState([]);
     const [homeSavings, setHomeSavings] = useState([]);
     const [homeSavingsTransactions, setHomeSavingsTransactions] = useState([]);
+    const [countdowns, setCountdowns] = useState(() => {
+        try {
+            const cached = localStorage.getItem('rks_countdowns');
+            return cached ? JSON.parse(cached) : [];
+        } catch (e) {
+            console.error('Error parsing countdowns from cache:', e);
+            return [];
+        }
+    });
+    const [summaryStats, setSummaryStats] = useState(() => {
+        try {
+            const cached = localStorage.getItem('rks_summary_stats');
+            return cached ? JSON.parse(cached) : {
+                totalProduction: 0,
+                totalSalesKg: 0,
+                totalEarned: 0
+            };
+        } catch (e) {
+            console.error('Error parsing summary stats from cache:', e);
+            return {
+                totalProduction: 0,
+                totalSalesKg: 0,
+                totalEarned: 0
+            };
+        }
+    });
 
     // --- Data Mappers (Backend snake_case -> Frontend camelCase) ---
     const mapSale = (s) => ({
@@ -121,7 +147,7 @@ export const DataProvider = ({ children }) => {
             ];
 
             // Home endpoints
-            const homeEndpoints = ['home/income', 'home/expenses', 'home/expense-items', 'home/loans', 'home/savings', 'home/savings-transactions'];
+            const homeEndpoints = ['home/income', 'home/expenses', 'home/expense-items', 'home/loans', 'home/savings', 'home/savings-transactions', 'countdowns'];
 
             // Fetch core data
             const coreResponses = await Promise.all(
@@ -150,6 +176,38 @@ export const DataProvider = ({ children }) => {
             setRawMaterialUsage(coreData[9]?.map(mapUsage) || []);
             setRawMaterialPrices(coreData[10]?.map(mapRawMaterialPrice) || []);
             setProducts(coreData[11] || []);
+
+            // Calculate Summary Stats (Current Month)
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            const safeNum = (val) => isNaN(Number(val)) ? 0 : Number(val);
+
+            const filterCurrentMonth = (data, dateField = 'date') => {
+                if (!data) return [];
+                return data.filter(item => {
+                    const itemDate = new Date(item[dateField]);
+                    return itemDate.getFullYear() === currentYear && itemDate.getMonth() === currentMonth;
+                });
+            };
+
+            const mappedSales = coreData[0]?.map(mapSale) || [];
+            const mappedProduction = coreData[1]?.map(mapProduction) || [];
+            const mappedOrders = coreData[7]?.map(mapOrder) || [];
+
+            const filteredSales = filterCurrentMonth(mappedSales.filter(sale => !sale.buyType || sale.buyType === 'regular'));
+            const filteredProduction = filterCurrentMonth(mappedProduction);
+            const filteredDeliveredOrders = filterCurrentMonth(mappedOrders.filter(o => o.status === 'delivered'), 'bookingDate');
+
+            const totalProduction = filteredProduction.reduce((sum, item) => sum + safeNum(item.qty), 0);
+            const totalSalesKg = filteredSales.reduce((sum, sale) => sum + (sale.items || []).reduce((itemSum, item) => itemSum + safeNum(item.qty), 0), 0) +
+                filteredDeliveredOrders.reduce((sum, order) => sum + (order.items || []).reduce((itemSum, item) => itemSum + safeNum(item.qty), 0), 0);
+            const totalEarned = filteredSales.reduce((sum, item) => sum + safeNum(item.total), 0) +
+                filteredDeliveredOrders.reduce((sum, item) => sum + safeNum(item.total), 0);
+
+            const newStats = { totalProduction, totalSalesKg, totalEarned };
+            setSummaryStats(newStats);
+            localStorage.setItem('rks_summary_stats', JSON.stringify(newStats));
 
             // Try to fetch farm data (gracefully handle if endpoints don't exist)
             try {
@@ -203,6 +261,14 @@ export const DataProvider = ({ children }) => {
                 setHomeLoanTransactions(homeData[3]?.transactions || []);
                 setHomeSavings(homeData[4] || []);
                 setHomeSavingsTransactions(homeData[5] || []);
+
+                const mappedCountdowns = homeData[6]?.map(c => ({
+                    ...c,
+                    fromDate: c.from_date,
+                    toDate: c.to_date
+                })) || [];
+                setCountdowns(mappedCountdowns);
+                localStorage.setItem('rks_countdowns', JSON.stringify(mappedCountdowns));
             } catch (homeError) {
                 console.log('Home endpoints error:', homeError);
                 setHomeIncome([]);
@@ -1250,6 +1316,20 @@ export const DataProvider = ({ children }) => {
         }
     };
 
+    // Countdown Functions
+    const addCountdown = (data) => addItem('countdowns', {
+        ...data,
+        id: Date.now(),
+        from_date: data.fromDate,
+        to_date: data.toDate
+    }, setCountdowns, countdowns, (c) => ({
+        ...c,
+        fromDate: c.from_date,
+        toDate: c.to_date
+    }));
+
+    const deleteCountdown = (id) => deleteItem('countdowns', id, setCountdowns, countdowns);
+
     return (
         <DataContext.Provider value={{
             sales, addSale, markSaleAsPaid, updateSaleAmountReceived, deleteSale, updateSale,
@@ -1283,8 +1363,9 @@ export const DataProvider = ({ children }) => {
             homeLoanTransactions, addHomeLoanTransaction, deleteHomeLoanTransaction,
             homeSavings, addHomeSaving, updateHomeSaving, deleteHomeSaving,
             homeSavingsTransactions, addHomeSavingTransaction, deleteHomeSavingTransaction,
+            countdowns, addCountdown, deleteCountdown,
             items,
-            loading, refreshData
+            loading, refreshData, summaryStats
         }}>
             {children}
         </DataContext.Provider>

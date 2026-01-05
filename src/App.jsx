@@ -42,6 +42,7 @@ import HomeExpenseMaster from './components/Home/HomeExpenseMaster';
 import HomeLoans from './components/Home/HomeLoans';
 import HomeSavings from './components/Home/HomeSavings';
 import HomeEMICalculator from './components/Home/HomeEMICalculator';
+import HomeCountdown from './components/Home/HomeCountdown';
 
 import { useData } from './context/DataContext';
 
@@ -100,6 +101,8 @@ function App() {
           return <HomeSavings onNavigateBack={() => setActiveTab('more')} />;
         case 'emi-calculator':
           return <HomeEMICalculator onNavigateBack={() => setActiveTab('more')} />;
+        case 'countdowns':
+          return <HomeCountdown onNavigateBack={() => setActiveTab('more')} />;
         case 'more':
           return <HomeMore onNavigate={setActiveTab} />;
         default:

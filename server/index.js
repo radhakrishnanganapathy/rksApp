@@ -689,6 +689,17 @@ const initializeTables = async () => {
             console.error('Error adding home savings transactions columns:', err.message);
         }
 
+        // Countdowns Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS countdowns (
+                id BIGINT PRIMARY KEY,
+                title TEXT NOT NULL,
+                from_date DATE NOT NULL,
+                to_date DATE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
         console.log('✅ Database tables checked/initialized');
     } catch (err) {
         console.error('❌ Database initialization failed:', err);
@@ -728,6 +739,39 @@ app.put('/api/home/savings/:id', async (req, res) => {
 });
 
 
+
+// --- Countdowns ---
+app.get('/api/countdowns', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM countdowns ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/countdowns', async (req, res) => {
+    const { id, title, from_date, to_date } = req.body;
+    try {
+        const result = await db.query(
+            'INSERT INTO countdowns (id, title, from_date, to_date) VALUES ($1, $2, $3, $4) RETURNING *',
+            [id || Date.now(), title, from_date, to_date]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/countdowns/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM countdowns WHERE id = $1', [id]);
+        res.json({ message: 'Deleted' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // --- Sales ---
 app.get('/api/sales', async (req, res) => {
