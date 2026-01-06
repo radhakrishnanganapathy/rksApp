@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, LayoutDashboard, Wallet, Calculator, Server, Timer } from 'lucide-react';
+import { TrendingUp, TrendingDown, LayoutDashboard, Wallet, Calculator, Server, Timer, Bell } from 'lucide-react';
 
 const HomeMore = ({ onNavigate }) => {
     const [dbUsage, setDbUsage] = useState(null);
@@ -21,6 +21,7 @@ const HomeMore = ({ onNavigate }) => {
         { id: 'savings', label: 'Savings', icon: TrendingUp, color: 'text-teal-600', bg: 'bg-teal-100' },
         { id: 'emi-calculator', label: 'EMI Calculator', icon: Calculator, color: 'text-indigo-600', bg: 'bg-indigo-100' },
         { id: 'countdowns', label: 'Countdowns', icon: Timer, color: 'text-pink-600', bg: 'bg-pink-100' },
+        { id: 'reminder-settings', label: 'Reminders', icon: Bell, color: 'text-orange-600', bg: 'bg-orange-100' },
     ];
 
     return (

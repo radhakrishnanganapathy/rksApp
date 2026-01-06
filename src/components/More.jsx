@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Factory, Wallet, Users, UserCircle, BarChart3, PieChart, ShoppingCart, GitCompare, ClipboardList, DollarSign, Tags, Database, Package, Archive, Server } from 'lucide-react';
+import { Factory, Wallet, Users, UserCircle, BarChart3, PieChart, ShoppingCart, GitCompare, ClipboardList, DollarSign, Tags, Database, Package, Archive, Server, Bell } from 'lucide-react';
 
 const More = ({ onNavigate }) => {
     const [dbUsage, setDbUsage] = useState(null);
@@ -27,6 +27,7 @@ const More = ({ onNavigate }) => {
         { id: 'raw-material-prices', label: 'Price List', icon: Tags, color: 'text-teal-600', bg: 'bg-teal-50' },
         { id: 'previous-month-stock', label: 'Previous Month Stock', icon: Archive, color: 'text-amber-600', bg: 'bg-amber-50' },
         { id: 'data-management', label: 'Import / Export', icon: Database, color: 'text-slate-600', bg: 'bg-slate-50' },
+        { id: 'reminder-settings', label: 'Reminders', icon: Bell, color: 'text-orange-600', bg: 'bg-orange-50' },
     ];
 
     return (

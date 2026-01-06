@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sprout, Settings, Clock, List, Scissors, Server } from 'lucide-react';
+import { Sprout, Settings, Clock, List, Scissors, Server, Bell } from 'lucide-react';
 
 const FarmMore = ({ onNavigate }) => {
     const [dbUsage, setDbUsage] = useState(null);
@@ -47,6 +47,13 @@ const FarmMore = ({ onNavigate }) => {
             description: 'Manage categories & subcategories',
             icon: Settings,
             color: 'bg-purple-500',
+        },
+        {
+            id: 'reminder-settings',
+            title: 'Reminders',
+            description: 'Set daily data reminders',
+            icon: Bell,
+            color: 'bg-orange-500',
         },
     ];
 

@@ -22,6 +22,7 @@ import GestureHandler from './components/GestureHandler';
 
 import Products from './components/Products';
 import PreviousMonthStock from './components/PreviousMonthStock';
+import ReminderSettings from './components/ReminderSettings';
 
 // Farm Components
 import FarmDashboard from './components/FarmDashboard';
@@ -79,6 +80,8 @@ function App() {
           return <Timeline onNavigateBack={() => setActiveTab('more')} />;
         case 'farm-categories':
           return <FarmExpenseCategories onNavigateBack={() => setActiveTab('more')} />;
+        case 'reminder-settings':
+          return <ReminderSettings onNavigateBack={() => setActiveTab('more')} />;
         default:
           return <FarmDashboard />;
       }
@@ -105,6 +108,8 @@ function App() {
           return <HomeCountdown onNavigateBack={() => setActiveTab('more')} />;
         case 'more':
           return <HomeMore onNavigate={setActiveTab} />;
+        case 'reminder-settings':
+          return <ReminderSettings onNavigateBack={() => setActiveTab('more')} />;
         default:
           return <HomeDashboard />;
       }
@@ -148,6 +153,8 @@ function App() {
         return <Products onNavigateBack={() => setActiveTab('more')} />;
       case 'previous-month-stock':
         return <PreviousMonthStock onNavigateBack={() => setActiveTab('more')} />;
+      case 'reminder-settings':
+        return <ReminderSettings onNavigateBack={() => setActiveTab('more')} />;
       default:
         return <Dashboard />;
     }
@@ -160,11 +167,11 @@ function App() {
   return (
     <GestureHandler onBack={() => {
       // Simple history back or tab navigation logic
-      const farmTabs = ['expenses', 'income', 'cultivation', 'harvesting', 'crop-master', 'timeline', 'farm-categories'];
+      const farmTabs = ['expenses', 'income', 'cultivation', 'harvesting', 'crop-master', 'timeline', 'farm-categories', 'reminder-settings'];
       const homeSnacksTabs = ['production', 'expenses', 'employees', 'customers', 'stats',
         'analysis', 'lastbuy', 'compare', 'orders', 'balance',
-        'raw-material-prices', 'data-management', 'products', 'previous-month-stock'];
-      const homeTabs = ['income', 'expenses', 'expense-master', 'loans', 'emi-calculator'];
+        'raw-material-prices', 'data-management', 'products', 'previous-month-stock', 'reminder-settings'];
+      const homeTabs = ['income', 'expenses', 'expense-master', 'loans', 'emi-calculator', 'reminder-settings'];
 
       if (businessMode === 'farm' && farmTabs.includes(activeTab)) {
         setActiveTab('more');
