@@ -297,7 +297,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                 </div>
                 <button
                     onClick={() => setShowForm(true)}
-                    className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                 >
                     <Plus size={20} />
                     Add Expense
@@ -326,8 +326,8 @@ const FarmExpenses = ({ onNavigateBack }) => {
                             <button
                                 onClick={() => setFilterType('month')}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'month'
-                                        ? 'bg-red-600 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                             >
                                 Month/Year
@@ -335,8 +335,8 @@ const FarmExpenses = ({ onNavigateBack }) => {
                             <button
                                 onClick={() => setFilterType('dateRange')}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'dateRange'
-                                        ? 'bg-red-600 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                             >
                                 Date Range
@@ -344,8 +344,8 @@ const FarmExpenses = ({ onNavigateBack }) => {
                             <button
                                 onClick={() => setFilterType('crop')}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'crop'
-                                        ? 'bg-red-600 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                             >
                                 By Crop
@@ -353,8 +353,8 @@ const FarmExpenses = ({ onNavigateBack }) => {
                             <button
                                 onClick={() => setFilterType('all')}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'all'
-                                        ? 'bg-red-600 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                             >
                                 All
@@ -372,7 +372,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                         type="date"
                                         value={filters.startDate}
                                         onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     />
                                 </div>
                                 <div>
@@ -383,7 +383,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                         type="date"
                                         value={filters.endDate}
                                         onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     />
                                 </div>
                             </div>
@@ -398,7 +398,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                     <select
                                         value={filters.month}
                                         onChange={(e) => setFilters({ ...filters, month: parseInt(e.target.value) })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     >
                                         {months.map(m => (
                                             <option key={m.value} value={m.value}>{m.label}</option>
@@ -412,7 +412,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                     <select
                                         value={filters.year}
                                         onChange={(e) => setFilters({ ...filters, year: parseInt(e.target.value) })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     >
                                         {years.map(y => (
                                             <option key={y} value={y}>{y}</option>
@@ -430,7 +430,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                 <select
                                     value={filters.cropId}
                                     onChange={(e) => setFilters({ ...filters, cropId: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                 >
                                     <option value="">All Crops</option>
                                     {allCrops.map(crop => (
@@ -445,7 +445,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                             <div className="text-sm text-gray-600">
                                 Showing <span className="font-semibold text-gray-800">{filteredExpenses.length}</span> expenses
                             </div>
-                            <div className="text-sm font-semibold text-red-600">
+                            <div className="text-sm font-semibold text-green-600">
                                 Total: ₹{filteredTotal.toFixed(2)}
                             </div>
                         </div>
@@ -469,7 +469,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                     required
                                     value={formData.date}
                                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                 />
                             </div>
 
@@ -482,7 +482,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                     required
                                     value={formData.cropId}
                                     onChange={(e) => setFormData({ ...formData, cropId: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                 >
                                     <option value="">Select Crop</option>
                                     {activeCrops.map((crop) => (
@@ -502,7 +502,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                     required
                                     value={formData.categoryId}
                                     onChange={(e) => handleCategoryChange(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                 >
                                     <option value="">Select Category</option>
                                     {categories.map((cat) => (
@@ -527,7 +527,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                         required={['fertilizer', 'seeds or plant', 'tillage', 'farming'].includes(categoryName)}
                                         value={formData.subcategoryId}
                                         onChange={(e) => handleSubcategoryChange(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     >
                                         <option value="">Select {categoryName === 'fertilizer' ? 'Fertilizer' : categoryName === 'seeds or plant' ? 'Seed/Plant' : 'Type'}</option>
                                         {subcategories.map((subcat) => (
@@ -550,7 +550,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                             required
                                             value={formData.unit}
                                             onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                         >
                                             <option value="">Select Unit</option>
                                             {getUnitOptions().map((unit) => (
@@ -571,7 +571,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                             required
                                             value={formData.quantity}
                                             onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                             placeholder="Enter quantity"
                                         />
                                     </div>
@@ -591,7 +591,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                                 min="0"
                                                 value={formData.maleCount}
                                                 onChange={(e) => setFormData({ ...formData, maleCount: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                                 placeholder="Male"
                                             />
                                         </div>
@@ -604,7 +604,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                                 min="0"
                                                 value={formData.femaleCount}
                                                 onChange={(e) => setFormData({ ...formData, femaleCount: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                                 placeholder="Female"
                                             />
                                         </div>
@@ -626,7 +626,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                         required
                                         value={formData.totalFood}
                                         onChange={(e) => setFormData({ ...formData, totalFood: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                         placeholder="Enter total food details"
                                     />
                                 </div>
@@ -643,7 +643,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                     required
                                     value={formData.amount}
                                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     placeholder="Enter amount"
                                 />
                             </div>
@@ -657,7 +657,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                     required={onlyNotesRequired()}
                                     value={formData.notes}
                                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     rows="3"
                                     placeholder={onlyNotesRequired() ? "Enter maintenance work details..." : "Additional notes (optional)"}
                                 />
@@ -673,7 +673,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                 >
                                     {editingExpense ? 'Update' : 'Add'} Expense
                                 </button>
@@ -710,7 +710,7 @@ const FarmExpenses = ({ onNavigateBack }) => {
                                             })}
                                         </span>
                                     </div>
-                                    <span className="font-bold text-red-600">₹{dayTotal.toFixed(2)}</span>
+                                    <span className="font-bold text-green-600">₹{dayTotal.toFixed(2)}</span>
                                 </div>
                                 <div className="divide-y divide-gray-100">
                                     {dayExpenses.map((expense) => (

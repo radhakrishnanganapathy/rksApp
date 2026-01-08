@@ -107,7 +107,7 @@ const FarmExpenseCategories = ({ onNavigateBack }) => {
                 </div>
                 <button
                     onClick={() => setShowCategoryForm(true)}
-                    className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                 >
                     <Plus size={20} />
                     Add Category
@@ -131,7 +131,7 @@ const FarmExpenseCategories = ({ onNavigateBack }) => {
                                     required
                                     value={categoryName}
                                     onChange={(e) => setCategoryName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     placeholder="e.g., Tillage, Seeds, Workers"
                                 />
                             </div>
@@ -149,7 +149,7 @@ const FarmExpenseCategories = ({ onNavigateBack }) => {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                 >
                                     {editingCategory ? 'Update' : 'Add'}
                                 </button>
@@ -175,7 +175,7 @@ const FarmExpenseCategories = ({ onNavigateBack }) => {
                                     required
                                     value={selectedCategoryId || ''}
                                     onChange={(e) => setSelectedCategoryId(parseInt(e.target.value))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                 >
                                     <option value="">Select Category</option>
                                     {categories.map((cat) => (
@@ -194,7 +194,7 @@ const FarmExpenseCategories = ({ onNavigateBack }) => {
                                     required
                                     value={subcategoryName}
                                     onChange={(e) => setSubcategoryName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     placeholder="e.g., Cow, Tractor"
                                 />
                             </div>
@@ -213,7 +213,7 @@ const FarmExpenseCategories = ({ onNavigateBack }) => {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                                 >
                                     {editingSubcategory ? 'Update' : 'Add'}
                                 </button>

@@ -40,11 +40,12 @@ const BottomNav = ({ activeTab, setActiveTab, businessMode }) => {
             {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
+                const activeColor = businessMode === 'farm' ? 'text-green-600' : (businessMode === 'home' ? 'text-purple-600' : 'text-primary-600');
                 return (
                     <button
                         key={item.id}
                         onClick={() => setActiveTab(item.id)}
-                        className={`flex flex-col items-center justify-center w-full space-y-1 ${isActive ? 'text-primary-600' : 'text-gray-500'
+                        className={`flex flex-col items-center justify-center w-full space-y-1 ${isActive ? activeColor : 'text-gray-500'
                             }`}
                     >
                         <Icon size={24} />

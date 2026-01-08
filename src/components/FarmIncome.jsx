@@ -112,13 +112,13 @@ const FarmIncome = ({ onNavigateBack }) => {
                     <p className="text-xs text-green-700 font-semibold mb-1">Total Income</p>
                     <p className="text-xl font-bold text-green-900">₹{totalIncome.toFixed(2)}</p>
                 </div>
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-lg p-4">
-                    <p className="text-xs text-blue-700 font-semibold mb-1">Advance</p>
-                    <p className="text-xl font-bold text-blue-900">₹{totalAdvance.toFixed(2)}</p>
+                <div className="bg-gradient-to-br from-lime-50 to-lime-100 border-2 border-lime-400 rounded-lg p-4">
+                    <p className="text-xs text-lime-700 font-semibold mb-1">Advance</p>
+                    <p className="text-xl font-bold text-lime-900">₹{totalAdvance.toFixed(2)}</p>
                 </div>
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-400 rounded-lg p-4">
-                    <p className="text-xs text-purple-700 font-semibold mb-1">Received</p>
-                    <p className="text-xl font-bold text-purple-900">₹{totalReceived.toFixed(2)}</p>
+                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-400 rounded-lg p-4">
+                    <p className="text-xs text-emerald-700 font-semibold mb-1">Received</p>
+                    <p className="text-xl font-bold text-emerald-900">₹{totalReceived.toFixed(2)}</p>
                 </div>
             </div>
 
@@ -283,8 +283,8 @@ const FarmIncome = ({ onNavigateBack }) => {
                                                     <h4 className="font-semibold text-gray-800">{crop?.cropName || 'Unknown Crop'}</h4>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <span className={`px-2 py-1 text-xs rounded-full ${income.amountType === 'advance'
-                                                            ? 'bg-blue-100 text-blue-800'
-                                                            : 'bg-purple-100 text-purple-800'
+                                                            ? 'bg-lime-100 text-lime-800'
+                                                            : 'bg-emerald-100 text-emerald-800'
                                                             }`}>
                                                             {income.amountType === 'advance' ? 'Advance' : 'Received'}
                                                         </span>

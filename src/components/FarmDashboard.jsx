@@ -68,31 +68,31 @@ const FarmDashboard = () => {
             {/* Overall Summary Cards - 3 Metrics */}
             <div className="grid grid-cols-3 gap-3 mb-6">
                 {/* Total Investment */}
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-xl p-4 shadow-md">
+                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-400 rounded-xl p-4 shadow-md">
                     <div className="flex items-center gap-2 mb-2">
-                        <div className="bg-blue-500 p-2 rounded-lg">
+                        <div className="bg-emerald-500 p-2 rounded-lg">
                             <DollarSign size={18} className="text-white" />
                         </div>
-                        <h3 className="text-xs font-semibold text-blue-800">Investment</h3>
+                        <h3 className="text-xs font-semibold text-emerald-800">Investment</h3>
                     </div>
-                    <p className="text-2xl font-bold text-blue-900">
+                    <p className="text-2xl font-bold text-emerald-900">
                         {formatCurrency(totalInvestment)}
                     </p>
-                    <p className="text-xs text-blue-600 mt-1">Total Expenses</p>
+                    <p className="text-xs text-emerald-600 mt-1">Total Expenses</p>
                 </div>
 
                 {/* Total Income */}
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-400 rounded-xl p-4 shadow-md">
+                <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-400 rounded-xl p-4 shadow-md">
                     <div className="flex items-center gap-2 mb-2">
-                        <div className="bg-purple-500 p-2 rounded-lg">
+                        <div className="bg-green-500 p-2 rounded-lg">
                             <TrendingUp size={18} className="text-white" />
                         </div>
-                        <h3 className="text-xs font-semibold text-purple-800">Income</h3>
+                        <h3 className="text-xs font-semibold text-green-800">Income</h3>
                     </div>
-                    <p className="text-2xl font-bold text-purple-900">
+                    <p className="text-2xl font-bold text-green-900">
                         {formatCurrency(totalIncome)}
                     </p>
-                    <p className="text-xs text-purple-600 mt-1">Total Revenue</p>
+                    <p className="text-xs text-green-600 mt-1">Total Revenue</p>
                 </div>
 
                 {/* Total Profit */}
