@@ -11,6 +11,7 @@ const Production = ({ onNavigateBack }) => {
     const [unit, setUnit] = useState('kg');
     const [batchNumber, setBatchNumber] = useState('');
     const [packedQty, setPackedQty] = useState(''); // New state for packed quantity
+    const [wastage, setWastage] = useState(''); // New state for wastage
     const [id, setId] = useState(null);
 
     const [activeTab, setActiveTab] = useState('list'); // 'add' | 'list'
@@ -31,6 +32,7 @@ const Production = ({ onNavigateBack }) => {
         setUnit('kg');
         setBatchNumber('');
         setPackedQty('');
+        setWastage('');
     };
 
     const handleSave = async () => {
@@ -42,7 +44,8 @@ const Production = ({ onNavigateBack }) => {
             qty: Number(qty),
             unit,
             batchNumber,
-            packedQty: packedQty ? Number(packedQty) : 0
+            packedQty: packedQty ? Number(packedQty) : 0,
+            wastage: wastage ? Number(wastage) : 0
         };
 
         try {
@@ -69,6 +72,7 @@ const Production = ({ onNavigateBack }) => {
         setUnit(prod.unit);
         setBatchNumber(prod.batchNumber || '');
         setPackedQty(prod.packedQty || '');
+        setWastage(prod.wastage || '');
         setActiveTab('add'); // Switch to add tab for editing
     };
 
@@ -88,6 +92,7 @@ const Production = ({ onNavigateBack }) => {
 
     const totalProduction = filteredProduction.reduce((sum, p) => sum + Number(p.qty), 0);
     const totalPacked = filteredProduction.reduce((sum, p) => sum + Number(p.packedQty || 0), 0);
+    const totalWastage = filteredProduction.reduce((sum, p) => sum + Number(p.wastage || 0), 0);
 
     return (
         <div className="space-y-6 pb-20">
@@ -177,6 +182,18 @@ const Production = ({ onNavigateBack }) => {
                                 <input type="text" value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} className="w-full border rounded p-2" placeholder="Optional" />
                             </div>
                         </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Wastage (kg)</label>
+                                <input
+                                    type="number"
+                                    value={wastage}
+                                    onChange={(e) => setWastage(e.target.value)}
+                                    className="w-full border rounded p-2"
+                                    placeholder="Wastage"
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <button onClick={handleSave} className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2">
@@ -191,9 +208,9 @@ const Production = ({ onNavigateBack }) => {
                     <div className="flex justify-between items-center">
                         <h3 className="font-semibold text-gray-700">Production History</h3>
                         <div className="text-right">
-                            <p className="text-xs text-gray-500">Total Raw / Packed</p>
-                            <p className="font-bold text-blue-600">
-                                {totalProduction.toFixed(2)} / <span className="text-green-600">{totalPacked.toFixed(2)}</span> kg
+                            <p className="text-xs text-gray-500">Total Raw / Packed / Wastage</p>
+                            <p className="font-bold text-blue-600 text-xs sm:text-base">
+                                {totalProduction.toFixed(2)} / <span className="text-green-600">{totalPacked.toFixed(2)}</span> / <span className="text-red-600">{totalWastage.toFixed(2)}</span> kg
                             </p>
                         </div>
                     </div>
@@ -226,12 +243,13 @@ const Production = ({ onNavigateBack }) => {
                                     <th className="px-3 py-2">Item</th>
                                     <th className="px-3 py-2 text-right">Raw Qty</th>
                                     <th className="px-3 py-2 text-right">Packed (kg)</th>
+                                    <th className="px-3 py-2 text-right">Wastage</th>
                                     <th className="px-3 py-2 text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
                                 {filteredProduction.length === 0 ? (
-                                    <tr><td colSpan="5" className="px-3 py-4 text-center text-gray-500">No records found</td></tr>
+                                    <tr><td colSpan="6" className="px-3 py-4 text-center text-gray-500">No records found</td></tr>
                                 ) : (
                                     filteredProduction.map((prod) => (
                                         <tr key={prod.id}>
@@ -242,6 +260,7 @@ const Production = ({ onNavigateBack }) => {
                                             </td>
                                             <td className="px-3 py-2 text-right">{prod.qty} {prod.unit}</td>
                                             <td className="px-3 py-2 text-right font-medium text-green-600">{prod.packedQty ? Number(prod.packedQty).toFixed(2) : '-'}</td>
+                                            <td className="px-3 py-2 text-right font-medium text-red-600">{prod.wastage ? Number(prod.wastage).toFixed(2) : '-'}</td>
                                             <td className="px-3 py-2 text-center flex justify-center gap-2">
                                                 <button onClick={() => handleEdit(prod)} className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
                                                 <button onClick={() => handleDelete(prod.id)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>

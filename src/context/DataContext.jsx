@@ -102,7 +102,8 @@ export const DataProvider = ({ children }) => {
     const mapProduction = (p) => ({
         ...p,
         batchNumber: p.batch_number,
-        packedQty: p.packed_qty ? Number(p.packed_qty) : 0
+        packedQty: p.packed_qty ? Number(p.packed_qty) : 0,
+        wastage: p.wastage ? Number(p.wastage) : 0
     });
 
     const mapExpense = (e) => ({

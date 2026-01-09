@@ -105,7 +105,8 @@ const initializeTables = async () => {
                 qty NUMERIC NOT NULL,
                 unit TEXT NOT NULL DEFAULT 'kg',
                 batch_number TEXT,
-                packed_qty NUMERIC DEFAULT 0
+                packed_qty NUMERIC DEFAULT 0,
+                wastage NUMERIC DEFAULT 0
             );
         `);
 
@@ -114,6 +115,7 @@ const initializeTables = async () => {
             await db.query(`ALTER TABLE production ADD COLUMN IF NOT EXISTS unit TEXT NOT NULL DEFAULT 'kg';`);
             await db.query(`ALTER TABLE production ADD COLUMN IF NOT EXISTS batch_number TEXT;`);
             await db.query(`ALTER TABLE production ADD COLUMN IF NOT EXISTS packed_qty NUMERIC DEFAULT 0;`);
+            await db.query(`ALTER TABLE production ADD COLUMN IF NOT EXISTS wastage NUMERIC DEFAULT 0;`);
         } catch (e) {
             console.log('Migration note: production columns might already exist');
         }
@@ -1067,11 +1069,11 @@ app.get('/api/production', async (req, res) => {
 });
 
 app.post('/api/production', async (req, res) => {
-    const { id, date, item, qty, unit, batchNumber, packedQty } = req.body;
+    const { id, date, item, qty, unit, batchNumber, packedQty, wastage } = req.body;
     try {
         const result = await db.query(
-            'INSERT INTO production (id, date, item, qty, unit, batch_number, packed_qty) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-            [id, date, item, qty, unit, batchNumber, packedQty || 0]
+            'INSERT INTO production (id, date, item, qty, unit, batch_number, packed_qty, wastage) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [id, date, item, qty, unit, batchNumber, packedQty || 0, wastage || 0]
         );
         res.json(result.rows[0]);
     } catch (err) {
@@ -1115,6 +1117,11 @@ app.put('/api/production/:id', async (req, res) => {
         if (packedQty !== undefined) {
             query += `packed_qty = $${paramCount}, `;
             params.push(packedQty);
+            paramCount++;
+        }
+        if (wastage !== undefined) {
+            query += `wastage = $${paramCount}, `;
+            params.push(wastage);
             paramCount++;
         }
 

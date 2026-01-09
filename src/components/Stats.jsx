@@ -16,6 +16,7 @@ const Stats = ({ onNavigateBack }) => {
     const [selectedProduct, setSelectedProduct] = useState(''); // For product sales stats filter
     const [selectedProductCustomer, setSelectedProductCustomer] = useState(''); // For product sales stats customer filter
     const [comparisonMetric, setComparisonMetric] = useState('rs'); // 'rs' or 'kg'
+    const [comparisonPeriod, setComparisonPeriod] = useState('full'); // '7', '15', '21', 'full'
 
     // Filter data based on month/year
     const filteredData = useMemo(() => {
@@ -318,7 +319,13 @@ const Stats = ({ onNavigateBack }) => {
         const currentMonthDaily = getDailyData(currentMonth, currentYear);
         const prevMonthDaily = getDailyData(prevMonth, prevYear);
 
-        const maxDays = Math.max(currentMonthDaily.length, prevMonthDaily.length);
+        let maxDays = Math.max(currentMonthDaily.length, prevMonthDaily.length);
+
+        // Apply period filter
+        if (comparisonPeriod !== 'full') {
+            maxDays = parseInt(comparisonPeriod);
+        }
+
         return Array.from({ length: maxDays }, (_, i) => ({
             day: i + 1,
             current: currentMonthDaily[i]?.value || 0,
@@ -326,7 +333,7 @@ const Stats = ({ onNavigateBack }) => {
             currentMonthName: now.toLocaleString('default', { month: 'short' }),
             prevMonthName: prevMonthDate.toLocaleString('default', { month: 'short' })
         }));
-    }, [sales, comparisonMetric]);
+    }, [sales, comparisonMetric, comparisonPeriod]);
 
     return (
         <div className="space-y-6 pb-20">
@@ -776,6 +783,27 @@ const Stats = ({ onNavigateBack }) => {
                             </button>
                         </div>
                     </div>
+
+                    {/* Period Filter */}
+                    <div className="px-4 py-2 bg-gray-50 border-b flex items-center justify-between gap-2 overflow-x-auto">
+                        <span className="text-xs font-medium text-gray-500 whitespace-nowrap">Period:</span>
+                        <div className="flex gap-1">
+                            {[
+                                { label: '1st 7 Days', value: '7' },
+                                { label: '1st 15 Days', value: '15' },
+                                { label: '1st 21 Days', value: '21' },
+                                { label: 'Full Month', value: 'full' }
+                            ].map((p) => (
+                                <button
+                                    key={p.value}
+                                    onClick={() => setComparisonPeriod(p.value)}
+                                    className={`px-2 py-1 text-[10px] sm:text-xs font-medium rounded-full whitespace-nowrap border transition-colors ${comparisonPeriod === p.value ? 'bg-cyan-50 border-cyan-200 text-cyan-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                    {p.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                     <div className="p-4" style={{ height: '400px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart
@@ -818,9 +846,9 @@ const Stats = ({ onNavigateBack }) => {
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </div >
             )}
-        </div>
+        </div >
     );
 };
 
