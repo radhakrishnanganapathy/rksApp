@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { formatCurrency } from '../../utils';
-import { Plus, Trash2, Save, ArrowLeft, Edit2, X } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Edit2, X, Filter } from 'lucide-react';
 
 const HomeIncome = ({ onNavigateBack }) => {
     const { homeIncome, addHomeIncome, updateHomeIncome, deleteHomeIncome, homeExpenseItems } = useData();
@@ -12,6 +13,18 @@ const HomeIncome = ({ onNavigateBack }) => {
     const [category, setCategory] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [showForm, setShowForm] = useState(false);
+
+    // Filter states
+    const [filterMonth, setFilterMonth] = useState(new Date().getMonth());
+    const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+
+    const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
     // Group items by category for the dropdown (filter only income)
     const groupedItems = homeExpenseItems
@@ -53,7 +66,6 @@ const HomeIncome = ({ onNavigateBack }) => {
             await addHomeIncome(data);
         }
 
-        // Reset form
         setDescription('');
         setAmount('');
         setCategory('');
@@ -76,7 +88,14 @@ const HomeIncome = ({ onNavigateBack }) => {
         }
     };
 
-    const sortedIncome = [...homeIncome].sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Filtering logic
+    const filteredIncome = homeIncome.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate.getMonth() === filterMonth && itemDate.getFullYear() === filterYear;
+    });
+
+    const sortedIncome = [...filteredIncome].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const totalMonthIncome = sortedIncome.reduce((sum, item) => sum + Number(item.amount), 0);
 
     return (
         <div className="space-y-6 pb-20">
@@ -97,9 +116,34 @@ const HomeIncome = ({ onNavigateBack }) => {
                 )}
             </div>
 
+            {/* Filter Section */}
+            <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 flex items-center gap-3">
+                <Filter size={18} className="text-gray-400" />
+                <div className="flex-1 grid grid-cols-2 gap-2">
+                    <select
+                        value={filterMonth}
+                        onChange={(e) => setFilterMonth(Number(e.target.value))}
+                        className="w-full border rounded p-1.5 text-sm bg-gray-50"
+                    >
+                        {months.map((m, i) => (
+                            <option key={m} value={i}>{m}</option>
+                        ))}
+                    </select>
+                    <select
+                        value={filterYear}
+                        onChange={(e) => setFilterYear(Number(e.target.value))}
+                        className="w-full border rounded p-1.5 text-sm bg-gray-50"
+                    >
+                        {years.map(y => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
             {/* Add/Edit Form */}
             {showForm && (
-                <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
+                <div className="bg-white p-4 rounded-lg shadow-sm space-y-4 border border-green-100">
                     <div className="flex justify-between items-center">
                         <h3 className="font-semibold text-gray-700">{editingId ? 'Edit Income' : 'Add Income'}</h3>
                         <button
@@ -124,8 +168,6 @@ const HomeIncome = ({ onNavigateBack }) => {
                             className="w-full border rounded p-2"
                         />
 
-                        {/* Income Item Selection */}
-                        {/* Category & Sub-category Selection */}
                         <div className="grid grid-cols-2 gap-2">
                             <div>
                                 <label className="block text-xs text-gray-500 mb-1">Select Category</label>
@@ -207,15 +249,21 @@ const HomeIncome = ({ onNavigateBack }) => {
 
             {/* List */}
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="p-3 bg-green-50 border-b border-green-100">
+                <div className="p-3 bg-green-50 border-b border-green-100 flex justify-between items-center">
                     <h3 className="font-semibold text-gray-700">Income History</h3>
+                    <div className="text-right">
+                        <p className="text-[10px] text-gray-500 uppercase font-bold">Monthly Total</p>
+                        <p className="font-bold text-green-600">{formatCurrency(totalMonthIncome)}</p>
+                    </div>
                 </div>
                 <div className="divide-y">
                     {sortedIncome.length === 0 ? (
-                        <p className="p-4 text-center text-gray-500">No income records found</p>
+                        <div className="p-10 text-center text-gray-400">
+                            <p className="text-sm italic">No records found for {months[filterMonth]} {filterYear}</p>
+                        </div>
                     ) : (
                         sortedIncome.map((item) => (
-                            <div key={item.id} className="p-4 flex justify-between items-center">
+                            <div key={item.id} className="p-4 flex justify-between items-center hover:bg-gray-50">
                                 <div>
                                     <p className="font-medium text-gray-800">{item.category}</p>
                                     <p className="text-xs text-gray-500">{new Date(item.date).toLocaleDateString()} • {item.description}</p>

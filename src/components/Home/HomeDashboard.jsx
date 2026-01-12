@@ -85,11 +85,18 @@ const HomeDashboard = () => {
     // Generic Data Fetcher for Charts
     const getChartData = (categoryFilter) => {
         const sourceData = transactionType === 'expense' ? homeExpenses : homeIncome;
+
+        // Filter by selected month and year
+        const filteredSource = sourceData.filter(item => {
+            const d = new Date(item.date);
+            return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+        });
+
         let data = {};
 
         if (categoryFilter) {
             // Sub-category (Description) Data
-            data = sourceData
+            data = filteredSource
                 .filter(e => e.category === categoryFilter)
                 .reduce((acc, curr) => {
                     const key = curr.description || 'Unspecified';
@@ -98,7 +105,7 @@ const HomeDashboard = () => {
                 }, {});
         } else {
             // Main Category Data
-            data = sourceData.reduce((acc, curr) => {
+            data = filteredSource.reduce((acc, curr) => {
                 const key = curr.category || 'Uncategorized';
                 acc[key] = (acc[key] || 0) + Number(curr.amount);
                 return acc;
