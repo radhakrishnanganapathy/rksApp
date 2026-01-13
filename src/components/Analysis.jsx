@@ -12,32 +12,39 @@ const Analysis = ({ onNavigateBack }) => {
     const [selectedProduct, setSelectedProduct] = useState('');
 
     const filteredData = useMemo(() => {
+        const isWastageCustomer = (customerId) => {
+            const customer = customers.find(c => String(c.id) === String(customerId));
+            const name = customer ? customer.name.toLowerCase() : '';
+            return name.includes('wastage') || name.includes('wastge');
+        };
+
         switch (filterType) {
             case 'customer_purchases': {
                 // All purchases by a specific customer
                 if (!selectedCustomer) return [];
-                return sales.filter(s => s.customerId === Number(selectedCustomer));
+                return sales.filter(s => String(s.customerId) === String(selectedCustomer));
             }
             case 'customer_purchases_month': {
                 // Customer purchases for specific month/year
                 if (!selectedCustomer) return [];
                 const filtered = filterByMonthYear(sales, selectedMonth, selectedYear);
-                return filtered.filter(s => s.customerId === Number(selectedCustomer));
+                return filtered.filter(s => String(s.customerId) === String(selectedCustomer));
             }
             case 'product_sales': {
-                // All sales of a specific product
+                // All sales of a specific product (excluding wastage)
                 if (!selectedProduct) return [];
-                return sales.filter(s => s.items.some(item => item.name === selectedProduct));
+                return sales.filter(s => s.items.some(item => item.name === selectedProduct) && !isWastageCustomer(s.customerId));
             }
             case 'product_sales_month': {
-                // Product sales for specific month/year
+                // Product sales for specific month/year (excluding wastage)
                 if (!selectedProduct) return [];
                 const filtered = filterByMonthYear(sales, selectedMonth, selectedYear);
-                return filtered.filter(s => s.items.some(item => item.name === selectedProduct));
+                return filtered.filter(s => s.items.some(item => item.name === selectedProduct) && !isWastageCustomer(s.customerId));
             }
             case 'total_sales_month': {
-                // Total sales for month/year
-                return filterByMonthYear(sales, selectedMonth, selectedYear);
+                // Total sales for month/year (excluding wastage)
+                const filtered = filterByMonthYear(sales, selectedMonth, selectedYear);
+                return filtered.filter(s => !isWastageCustomer(s.customerId));
             }
             case 'production_by_item_month': {
                 // Production of specific item for month/year
@@ -52,7 +59,7 @@ const Analysis = ({ onNavigateBack }) => {
             default:
                 return [];
         }
-    }, [filterType, selectedMonth, selectedYear, selectedCustomer, selectedProduct, sales, production]);
+    }, [filterType, selectedMonth, selectedYear, selectedCustomer, selectedProduct, sales, production, customers]);
 
     const summary = useMemo(() => {
         if (filterType.includes('sales') || filterType.includes('customer')) {

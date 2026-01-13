@@ -47,8 +47,15 @@ const Dashboard = () => {
         });
     };
 
-    // Filter Data - Only show regular sales (not order-converted)
-    const filteredSales = useMemo(() => filterByDate(sales.filter(sale => !sale.buyType || sale.buyType === 'regular')), [sales, selectedMonth, selectedYear, selectedDate, filterType]);
+    // Filter Data - Only show regular sales (not order-converted) and exclude wastage
+    const filteredSales = useMemo(() => {
+        const base = sales.filter(sale => !sale.buyType || sale.buyType === 'regular');
+        return filterByDate(base.filter(sale => {
+            const customer = customers.find(c => String(c.id) === String(sale.customerId));
+            const name = customer ? customer.name.toLowerCase() : '';
+            return !name.includes('wastage') && !name.includes('wastge');
+        }));
+    }, [sales, customers, selectedMonth, selectedYear, selectedDate, filterType]);
     const filteredProduction = useMemo(() => filterByDate(production), [production, selectedMonth, selectedYear, selectedDate, filterType]);
     const filteredExpenses = useMemo(() => filterByDate(expenses), [expenses, selectedMonth, selectedYear, selectedDate, filterType]);
     const filteredAttendance = useMemo(() => filterByDate(attendance), [attendance, selectedMonth, selectedYear, selectedDate, filterType]);
@@ -87,10 +94,23 @@ const Dashboard = () => {
 
     // Calculate total unpaid amount (regular sales + unpaid orders)
     const totalUnpaid = useMemo(() => {
-        const unpaidSales = sales.filter(sale => sale.paymentStatus === 'not_paid' && (!sale.buyType || sale.buyType === 'regular'));
-        const unpaidOrders = orders.filter(order => order.paymentStatus === 'not_paid');
+        const unpaidSales = sales.filter(sale => {
+            const isUnpaid = sale.paymentStatus === 'not_paid';
+            const isRegular = !sale.buyType || sale.buyType === 'regular';
+            const customer = customers.find(c => String(c.id) === String(sale.customerId));
+            const name = customer ? customer.name.toLowerCase() : '';
+            const isWastage = name.includes('wastage') || name.includes('wastge');
+            return isUnpaid && isRegular && !isWastage;
+        });
+        const unpaidOrders = orders.filter(order => {
+            const isUnpaid = order.paymentStatus === 'not_paid';
+            const customer = customers.find(c => String(c.id) === String(order.customerId));
+            const name = customer ? customer.name.toLowerCase() : '';
+            const isWastage = name.includes('wastage') || name.includes('wastge');
+            return isUnpaid && !isWastage;
+        });
         return [...unpaidSales, ...unpaidOrders].reduce((sum, item) => sum + safeNum(item.total), 0);
-    }, [sales, orders]);
+    }, [sales, orders, customers]);
 
 
 

@@ -196,15 +196,32 @@ export const DataProvider = ({ children }) => {
             const mappedProduction = coreData[1]?.map(mapProduction) || [];
             const mappedOrders = coreData[7]?.map(mapOrder) || [];
 
-            const filteredSales = filterCurrentMonth(mappedSales.filter(sale => !sale.buyType || sale.buyType === 'regular'));
+            const filteredSales = filterCurrentMonth(mappedSales.filter(sale => {
+                const isRegular = !sale.buyType || sale.buyType === 'regular';
+                const customer = (coreData[4] || []).find(c => String(c.id) === String(sale.customerId));
+                const name = customer ? customer.name.toLowerCase() : '';
+                const isWastage = name.includes('wastage') || name.includes('wastge');
+                return isRegular && !isWastage;
+            }));
             const filteredProduction = filterCurrentMonth(mappedProduction);
             const filteredDeliveredOrders = filterCurrentMonth(mappedOrders.filter(o => o.status === 'delivered'), 'bookingDate');
 
             const totalProduction = filteredProduction.reduce((sum, item) => sum + safeNum(item.qty), 0);
             const totalSalesKg = filteredSales.reduce((sum, sale) => sum + (sale.items || []).reduce((itemSum, item) => itemSum + safeNum(item.qty), 0), 0) +
-                filteredDeliveredOrders.reduce((sum, order) => sum + (order.items || []).reduce((itemSum, item) => itemSum + safeNum(item.qty), 0), 0);
+                filteredDeliveredOrders.reduce((sum, order) => {
+                    const customer = (coreData[4] || []).find(c => String(c.id) === String(order.customerId));
+                    const name = customer ? customer.name.toLowerCase() : '';
+                    const isWastage = name.includes('wastage') || name.includes('wastge');
+                    if (isWastage) return sum;
+                    return sum + (order.items || []).reduce((itemSum, item) => itemSum + safeNum(item.qty), 0);
+                }, 0);
             const totalEarned = filteredSales.reduce((sum, item) => sum + safeNum(item.total), 0) +
-                filteredDeliveredOrders.reduce((sum, item) => sum + safeNum(item.total), 0);
+                filteredDeliveredOrders.reduce((sum, order) => {
+                    const customer = (coreData[4] || []).find(c => String(c.id) === String(order.customerId));
+                    const name = customer ? customer.name.toLowerCase() : '';
+                    if (name.includes('wastage') || name.includes('wastge')) return sum;
+                    return sum + safeNum(order.total);
+                }, 0);
 
             const newStats = { totalProduction, totalSalesKg, totalEarned };
             setSummaryStats(newStats);

@@ -36,14 +36,21 @@ const Stats = ({ onNavigateBack }) => {
             });
         };
 
+        const baseSales = filterByDate(sales);
+
         return {
-            sales: filterByDate(sales),
+            sales: baseSales.filter(sale => {
+                const customer = customers.find(c => String(c.id) === String(sale.customerId));
+                const name = customer ? customer.name.toLowerCase() : '';
+                return !name.includes('wastage') && !name.includes('wastge');
+            }),
+            allSales: baseSales, // Keep all for stock tally
             production: filterByDate(production),
             expenses: filterByDate(expenses),
             attendance: filterByDate(attendance),
             rawMaterialUsage: filterByDate(rawMaterialUsage)
         };
-    }, [sales, production, expenses, attendance, rawMaterialUsage, selectedMonth, selectedYear, selectedDate, filterType]);
+    }, [sales, production, expenses, attendance, rawMaterialUsage, selectedMonth, selectedYear, selectedDate, filterType, customers]);
 
     // Calculate main statistics
     const stats = useMemo(() => {
@@ -165,8 +172,8 @@ const Stats = ({ onNavigateBack }) => {
             itemData[prod.item].production += Number(prod.qty);
         });
 
-        // Get sales data
-        filteredData.sales.forEach(sale => {
+        // Get sales data - Use ALL sales (including wastage) for accurate stock tally
+        filteredData.allSales.forEach(sale => {
             sale.items.forEach(item => {
                 if (!itemData[item.name]) {
                     itemData[item.name] = { production: 0, sales: 0, stock: 0, previousStock: 0 };
@@ -301,6 +308,10 @@ const Stats = ({ onNavigateBack }) => {
             }));
 
             sales.forEach(sale => {
+                const customer = customers.find(c => String(c.id) === String(sale.customerId));
+                const name = customer ? customer.name.toLowerCase() : '';
+                if (name.includes('wastage') || name.includes('wastge')) return;
+
                 const saleDate = new Date(sale.date);
                 if (saleDate.getMonth() === month && saleDate.getFullYear() === year) {
                     const day = saleDate.getDate();
@@ -333,7 +344,7 @@ const Stats = ({ onNavigateBack }) => {
             currentMonthName: now.toLocaleString('default', { month: 'short' }),
             prevMonthName: prevMonthDate.toLocaleString('default', { month: 'short' })
         }));
-    }, [sales, comparisonMetric, comparisonPeriod]);
+    }, [sales, comparisonMetric, comparisonPeriod, customers]);
 
     return (
         <div className="space-y-6 pb-20">
