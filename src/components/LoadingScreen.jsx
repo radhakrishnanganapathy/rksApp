@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { Timer } from 'lucide-react';
 import './LoadingScreen.css';
+import tickSoundFile from '../../assert/ticking-clock.mp3';
 
 const LoadingScreen = () => {
     const { summaryStats, countdowns } = useData();
@@ -9,6 +10,47 @@ const LoadingScreen = () => {
     const [countdownIndex, setCountdownIndex] = useState(0);
     const [isExiting, setIsExiting] = useState(false);
     const [isCountdownExiting, setIsCountdownExiting] = useState(false);
+    const [yearEndTimer, setYearEndTimer] = useState({ d: 0, h: 0, m: 0, s: 0 });
+    const audioRef = React.useRef(null);
+
+    // Audio effect for the "tik tok" sound
+    useEffect(() => {
+        if (!audioRef.current) {
+            audioRef.current = new Audio(tickSoundFile);
+        }
+
+        const playTick = () => {
+            if (audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(e => {
+                    // Ignore autoplay restriction errors
+                });
+            }
+        };
+
+        const timer = setInterval(() => {
+            const now = new Date();
+            const yearEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+            const diff = yearEnd - now;
+
+            if (diff > 0) {
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                const m = Math.floor((diff / (1000 * 60)) % 60);
+                const s = Math.floor((diff / 1000) % 60);
+                setYearEndTimer({ d, h, m, s });
+                playTick();
+            }
+        }, 1000);
+
+        return () => {
+            clearInterval(timer);
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
+        };
+    }, []);
 
     const activeCountdowns = (countdowns || [])
         .map(cd => {
@@ -56,7 +98,42 @@ const LoadingScreen = () => {
 
     return (
         <div className="fixed inset-0 bg-gradient-to-br from-primary-400 via-primary-500 to-primary-600 flex flex-col items-center justify-center z-50 text-center">
-            <div className="w-full px-6">
+            <div className="w-full px-6 flex flex-col items-center">
+
+                {/* 2026 Year End Countdown */}
+                <div className="mb-10 p-5 bg-white/10 rounded-[2.5rem] backdrop-blur-xl border border-white/20 w-full max-w-sm shadow-2xl">
+                    <p className="text-white/60 text-[10px] uppercase tracking-[0.4em] font-black mb-4">
+                        {new Date().getFullYear()} ENDS IN
+                    </p>
+                    <div className="flex justify-center items-end gap-3">
+                        <div className="flex flex-col">
+                            <span className="text-white text-3xl font-black leading-none">{yearEndTimer.d}</span>
+                            <span className="text-white/40 text-[8px] uppercase font-bold mt-1.5 tracking-tighter">Days</span>
+                        </div>
+                        <span className="text-white/20 text-2xl font-light mb-4">:</span>
+                        <div className="flex flex-col">
+                            <span className="text-white text-3xl font-black leading-none">
+                                {String(yearEndTimer.h).padStart(2, '0')}
+                            </span>
+                            <span className="text-white/40 text-[8px] uppercase font-bold mt-1.5 tracking-tighter">Hours</span>
+                        </div>
+                        <span className="text-white/20 text-2xl font-light mb-4">:</span>
+                        <div className="flex flex-col">
+                            <span className="text-white text-3xl font-black leading-none">
+                                {String(yearEndTimer.m).padStart(2, '0')}
+                            </span>
+                            <span className="text-white/40 text-[8px] uppercase font-bold mt-1.5 tracking-tighter">Mins</span>
+                        </div>
+                        <span className="text-white/20 text-2xl font-light mb-4">:</span>
+                        <div className="flex flex-col">
+                            <span className="text-white text-3xl font-black leading-none text-primary-200">
+                                {String(yearEndTimer.s).padStart(2, '0')}
+                            </span>
+                            <span className="text-white/40 text-[8px] uppercase font-bold mt-1.5 tracking-tighter">Secs</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="h-24 mb-6 flex flex-col items-center justify-center">
                     {currentCountdown && (
                         <div key={currentCountdown.id} className={`transition-all duration-500 ${isCountdownExiting ? 'opacity-0 -translate-y-4' : 'opacity-100 translate-y-0'}`}>
